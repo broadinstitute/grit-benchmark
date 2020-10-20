@@ -190,6 +190,20 @@ grit_ceres_comparison_gg
 # In[12]:
 
 
+# What are the perturbations with high grit and low ceres scores?
+(
+    cell_health_results_df
+    .query("grit > 2")
+    .query("ceres_score > -1")
+    .query("barcode_control == 'cutting_control'")
+    .sort_values(by="ceres_score")
+    .reset_index(drop=True)
+)
+
+
+# In[13]:
+
+
 control_compare_df = (
     cell_health_results_df.pivot(
         index=["perturbation", "group", "cell_line", "ceres_score"],
@@ -201,7 +215,7 @@ control_compare_df = (
 control_compare_df.head()
 
 
-# In[13]:
+# In[14]:
 
 
 grit_barcode_comparison_gg = (
