@@ -16,8 +16,15 @@ import mygene
 # In[2]:
 
 
+output_dir = pathlib.Path("figures")
+output_dir.mkdir(exist_ok=True)
+cell_health_dir = pathlib.Path("../../1.calculate-metrics/cell-health/results")
+
+
+# In[3]:
+
+
 # Load cell health grit scores
-cell_health_dir = pathlib.Path("../1.calculate-metrics/results")
 cell_health_grit_file = pathlib.Path(f"{cell_health_dir}/cell_health_grit.tsv")
 
 cell_health_grit_df = pd.read_csv(cell_health_grit_file, sep="\t")
@@ -25,7 +32,7 @@ print(cell_health_grit_df.shape)
 cell_health_grit_df.head()
 
 
-# In[3]:
+# In[4]:
 
 
 mg = mygene.MyGeneInfo()
@@ -42,7 +49,7 @@ ncbi_id_df = result.drop_duplicates(subset="_id").loc[:, ["_id"]].reset_index(dr
 ncbi_id_df.head(2)
 
 
-# In[4]:
+# In[5]:
 
 
 cell_health_grit_df = cell_health_grit_df.merge(ncbi_id_df, left_on="group", right_on="query", how="left")
@@ -51,11 +58,11 @@ print(cell_health_grit_df.shape)
 cell_health_grit_df.head(2)
 
 
-# In[5]:
+# In[6]:
 
 
 # Load ceres data
-ceres_dir = pathlib.Path("../0.download-data/data/")
+ceres_dir = pathlib.Path("../../0.download-data/data/")
 ceres_file = pathlib.Path(f"{ceres_dir}/ceres.csv")
 depmap_sample_file = pathlib.Path(f"{ceres_dir}/depmap_sample_info.csv")
 
@@ -63,7 +70,7 @@ ceres_df = pd.read_csv(ceres_file, index_col=0)
 depmap_sample_df = pd.read_csv(depmap_sample_file, index_col=0)
 
 
-# In[6]:
+# In[7]:
 
 
 # Clean gene name column
@@ -86,7 +93,7 @@ ceres_df.columns = ncbi_gene_id
 ceres_genes_df.head(3)
 
 
-# In[7]:
+# In[8]:
 
 
 # Merge the data
@@ -96,14 +103,14 @@ print(ceres_df.shape)
 ceres_df.head(3)
 
 
-# In[8]:
+# In[9]:
 
 
 cell_lines = cell_health_grit_df.cell_line.unique().tolist()
 assert all([x in ceres_df.stripped_cell_line_name.tolist() for x in cell_lines])
 
 
-# In[9]:
+# In[10]:
 
 
 cols = ["stripped_cell_line_name"] + cell_health_grit_df._id.dropna().unique().tolist()
@@ -123,7 +130,7 @@ print(ceres_subset_df.shape)
 ceres_subset_df.head(3)
 
 
-# In[10]:
+# In[11]:
 
 
 cell_health_results_df = (
@@ -155,7 +162,7 @@ print(cell_health_results_df.shape)
 cell_health_results_df.head(3)
 
 
-# In[11]:
+# In[12]:
 
 
 cell_line_colors = {
@@ -179,15 +186,13 @@ grit_ceres_comparison_gg = (
     gg.theme(strip_background=gg.element_rect(color="black", fill="#fdfff4"))
 )
 
-output_dir = pathlib.Path("figures")
-output_dir.mkdir(exist_ok=True)
 output_file = pathlib.Path(f"{output_dir}/cell_health_grit_ceres_comparison.png")
 grit_ceres_comparison_gg.save(output_file, dpi=500, height=3.5, width=6)
 
 grit_ceres_comparison_gg
 
 
-# In[12]:
+# In[13]:
 
 
 # What are the perturbations with high grit and low ceres scores?
@@ -201,7 +206,7 @@ grit_ceres_comparison_gg
 )
 
 
-# In[13]:
+# In[14]:
 
 
 control_compare_df = (
@@ -215,7 +220,7 @@ control_compare_df = (
 control_compare_df.head()
 
 
-# In[14]:
+# In[15]:
 
 
 grit_barcode_comparison_gg = (
