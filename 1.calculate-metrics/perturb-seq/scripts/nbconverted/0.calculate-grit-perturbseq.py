@@ -178,13 +178,35 @@ replicate_group_grit = {'replicate_id': 'cell_identity', 'group_id': 'guide_iden
 
 
 all_sc_grit_results = []
+all_sc_umap_embeddings = []
 
 genes = sc_df.gene_identity.unique()
 for gene in genes:
     if gene not in ["neg", "*", "nan"]:
         print(f"Now analyzing {gene}...")
         subset_sc_df = sc_df.query("gene_identity in @gene")
+        
         guides = subset_sc_df.guide_identity.unique()
+            
+        subset_sc_df = pd.concat([subset_sc_df, neg_controls_df]).reset_index(drop=True)
+        
+        # Apply UMAP to single cell profiles
+        embedding = umap.UMAP().fit_transform(subset_sc_df.loc[:, genes_to_retain])
+
+        # Combine results with single cell dataframe
+        embedding_df = pd.concat(
+            [
+                subset_sc_df.drop(gene_features, axis="columns").reset_index(drop=True),
+                pd.DataFrame(embedding, columns=["umap_0", "umap_1"])
+            ],
+            axis="columns"
+        )
+        
+        # Append to list
+        embedding_df.cell_identity = embedding_df.cell_identity.astype(str)
+        all_sc_umap_embeddings.append(embedding_df.assign(grit_gene=gene))
+
+        # Now calculate sc-Grit per guide
         for guide in guides:
             subset_guide_df = pd.concat(
                 [
@@ -193,6 +215,7 @@ for gene in genes:
                 ]
             ).reset_index(drop=True)
             
+            # Calculate Grit
             sc_grit_result = evaluate(
                 profiles=subset_guide_df,
                 features=genes_to_retain,
@@ -219,33 +242,24 @@ all_sc_grit_results.head()
 # In[12]:
 
 
-# Apply UMAP to single cell profiles
-embedding = umap.UMAP().fit_transform(sc_df.loc[:, genes_to_retain])
+all_sc_umap_embeddings = pd.concat(all_sc_umap_embeddings).reset_index(drop=True)
+
+print(all_sc_umap_embeddings.shape)
+all_sc_umap_embeddings.head()
 
 
 # In[13]:
 
 
-# Combine results with single cell dataframe
-embedding_df = pd.concat(
-    [
-        sc_df.drop(gene_features, axis="columns").reset_index(drop=True),
-        pd.DataFrame(embedding, columns=["umap_0", "umap_1"])
-    ],
-    axis="columns"
-)
-
-embedding_df.cell_identity = embedding_df.cell_identity.astype(str)
-
-embedding_df = embedding_df.merge(
+embedding_df = all_sc_umap_embeddings.merge(
     all_sc_grit_results,
-    left_on="cell_identity",
-    right_on="perturbation",
+    left_on=["cell_identity", "grit_gene"],
+    right_on=["perturbation", "grit_gene"],
     how="right"
 ).merge(
     activity_df,
-    left_on="guide_identity",
-    right_on="perturbation",
+    left_on=["guide_identity", "gene_identity"],
+    right_on=["perturbation", "gene"],
     how="outer",
     suffixes=["", "_activity"]
 )
