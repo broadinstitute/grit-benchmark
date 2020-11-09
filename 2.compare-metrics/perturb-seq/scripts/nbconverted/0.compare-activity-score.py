@@ -158,29 +158,6 @@ gene_gg
 # In[9]:
 
 
-umap_gg = (
-    gg.ggplot(sc_df, gg.aes(x="umap_0", y="umap_1")) +
-    gg.geom_point(gg.aes(color="grit"), alpha=0.2, size=1, stroke=0) +
-    gg.facet_wrap("~gene_identity") +
-    gg.theme_bw() +
-    gg.xlab("UMAP X") +
-    gg.ylab("UMAP Y") +
-    gg.ggtitle(f"{gse_id} (Jost et al. 2020 CRISPRi)") +
-    gg.theme(
-        strip_background=gg.element_rect(colour="black", fill="#fdfff4"),
-        axis_text=gg.element_text(size=6)
-    )
-)
-
-output_file = pathlib.Path(f"{output_dir}/{gse_id}_singlecell_umap_grit.png")
-umap_gg.save(output_file, dpi=500, height=5, width=6)
-
-umap_gg
-
-
-# In[10]:
-
-
 for gene in sc_df.gene.unique():
     if gene in ["neg", "*", "nan", np.nan]:
         continue
@@ -211,6 +188,8 @@ for gene in sc_df.gene.unique():
         gg.geom_point(gg.aes(color="grit"), size=2, stroke=0, alpha=0.5) +
         gg.facet_wrap("~grit_facet_label") +
         gg.theme_bw() +
+        gg.xlab("UMAP 0") +
+        gg.ylab("UMAP 1") +
         gg.theme(
             strip_background=gg.element_rect(colour="black", fill="#fdfff4")
         )
