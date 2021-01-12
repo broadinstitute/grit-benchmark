@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# # Calculate grit for bulk profile data
+
 # In[1]:
 
 
@@ -8,7 +10,7 @@ import pathlib
 import numpy as np
 import pandas as pd
 
-from pycytominer.cyto_utils import infer_cp_features
+from pycytominer.cyto_utils import infer_cp_features, output
 from pycytominer import feature_select
 
 from cytominer_eval import evaluate
@@ -51,11 +53,26 @@ df = feature_select(
 features = infer_cp_features(df)
 meta_features = infer_cp_features(df, metadata=True)
 
+
 print(df.shape)
 df.head(2)
 
 
 # In[4]:
+
+
+# Output feature selected file
+output_file = pathlib.Path("data/cell_health_merged_feature_select.csv.gz")
+
+output(
+    df=df,
+    output_filename=output_file,
+    sep=",",
+    compression_options={"method": "gzip", "mtime": 1}
+)
+
+
+# In[5]:
 
 
 # Define cell health constants
@@ -96,30 +113,13 @@ control_barcodes = {
 control_barcodes
 
 
-# In[5]:
-
-
-grit_results = []
-for cell_line in df.Metadata_cell_line.unique():
-    for control_barcode in control_barcodes:
-        result = evaluate(
-            profiles=df.query("Metadata_cell_line == @cell_line"),
-            features=features,
-            meta_features=[barcode_col, gene_col],
-            replicate_groups=replicate_group_grit,
-            operation="grit",
-            grit_control_perts=control_barcodes[control_barcode]
-        ).assign(cell_line=cell_line, barcode_control=control_barcode)
-
-        grit_results.append(result)
-    
-grit_results = pd.concat(grit_results).reset_index(drop=True)
-
-print(grit_results.shape)
-grit_results.head()
-
-
 # In[6]:
+
+
+get_ipython().run_cell_magic('time', '', 'grit_results = []\nfor cell_line in df.Metadata_cell_line.unique():\n    for control_barcode in control_barcodes:\n        for cor_method in ["pearson", "spearman"]:\n            result = evaluate(\n                profiles=df.query("Metadata_cell_line == @cell_line"),\n                features=features,\n                meta_features=[barcode_col, gene_col],\n                replicate_groups=replicate_group_grit,\n                operation="grit",\n                similarity_metric=cor_method,\n                grit_control_perts=control_barcodes[control_barcode]\n            ).assign(\n                cell_line=cell_line,\n                barcode_control=control_barcode,\n                cor_method=cor_method\n            )\n\n            grit_results.append(result)\n    \ngrit_results = pd.concat(grit_results).reset_index(drop=True)\n\nprint(grit_results.shape)\ngrit_results.head()')
+
+
+# In[7]:
 
 
 # Some perturbations have only one guide per gene, these cannot have grit scores
@@ -127,7 +127,7 @@ print(grit_results.grit.isna().sum())
 grit_results.loc[grit_results.grit.isna(), :].reset_index(drop=True).head(5)
 
 
-# In[7]:
+# In[8]:
 
 
 # Output results
@@ -135,4 +135,21 @@ output_dir = "results"
 output_file = pathlib.Path(f"{output_dir}/cell_health_grit.tsv")
 
 grit_results.to_csv(output_file, sep="\t", index=False)
+
+
+# ## Calculate mp-value
+
+# In[9]:
+
+
+get_ipython().run_cell_magic('time', '', 'mp_results = []\n\nfor cell_line in df.Metadata_cell_line.unique():\n    for num_permutations in [10, 100, 1000, 5000]:\n\n        mp_value_params = {"nb_permutations": num_permutations}\n\n        result = evaluate(\n            profiles=df.query("Metadata_cell_line == @cell_line"),\n            features=features,\n            meta_features=[barcode_col, gene_col],\n            replicate_groups="Metadata_pert_name",\n            operation="mp_value",\n            grit_control_perts=control_barcodes["cutting_control"],\n            mp_value_params=mp_value_params\n        ).assign(\n            cell_line=cell_line,\n            barcode_control="cutting_control",\n            num_permutations=num_permutations\n        )\n\n        mp_results.append(result)\n    \nmp_results = pd.concat(mp_results).reset_index(drop=True)\n\nprint(mp_results.shape)\nmp_results.head()')
+
+
+# In[10]:
+
+
+# Output results
+output_file = pathlib.Path(f"{output_dir}/cell_health_mpvalue.tsv")
+
+mp_results.to_csv(output_file, sep="\t", index=False)
 
