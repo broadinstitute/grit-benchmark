@@ -80,27 +80,38 @@ grit_compartment_results = []
 for cell_line in df.Metadata_cell_line.unique():
     for compartment in compartments:
         compartment_features = infer_cp_features(df, compartments=compartment)
-        subset_df = df.loc[:, meta_features + compartment_features]
-
-        result = evaluate(
-            profiles=subset_df.query("Metadata_cell_line == @cell_line"),
-            features=compartment_features,
-            meta_features=[barcode_col, gene_col],
-            replicate_groups=replicate_group_grit,
-            operation="grit",
-            similarity_metric="pearson",
-            grit_control_perts=control_barcodes
-        ).assign(
-            cell_line=cell_line,
-            barcode_control="cutting_control",
-            cor_method="pearson",
-            compartment=compartment,
-            channel="all",
-            feature_group="all",
-            num_features=len(compartment_features)
-        )
         
-        grit_compartment_results.append(result)
+        for drop in [True, False]:
+            
+            if drop:
+                subset_df = df.drop(compartment_features, axis="columns")
+                dropped_or_exclusive = "dropped"
+                use_features = subset_df.drop(meta_features, axis="columns").columns.tolist()
+            else:
+                subset_df = df.loc[:, meta_features + compartment_features]
+                dropped_or_exclusive = "exclusive"
+                use_features = compartment_features
+
+            result = evaluate(
+                profiles=subset_df.query("Metadata_cell_line == @cell_line"),
+                features=use_features,
+                meta_features=[barcode_col, gene_col],
+                replicate_groups=replicate_group_grit,
+                operation="grit",
+                similarity_metric="pearson",
+                grit_control_perts=control_barcodes
+            ).assign(
+                cell_line=cell_line,
+                barcode_control="cutting_control",
+                cor_method="pearson",
+                compartment=compartment,
+                channel="all",
+                feature_group="all",
+                num_features=len(compartment_features),
+                dropped_or_exclusive=dropped_or_exclusive
+            )
+
+            grit_compartment_results.append(result)
         
 grit_compartment_results = pd.concat(grit_compartment_results).reset_index(drop=True)
 
@@ -118,30 +129,40 @@ feature_group_compartments = list(set(["_".join(x.split("_")[0:2]) for x in all_
 grit_subcompartment_results = []
 for cell_line in df.Metadata_cell_line.unique():
     for compartment_group in feature_group_compartments:
-        compartment_features = df.loc[:, df.columns.str.startswith(compartment_group)].columns.tolist()
-        subset_df = df.loc[:, meta_features + compartment_features]
-        
         compartment, feature_group = compartment_group.split("_")
+        compartment_features = df.loc[:, df.columns.str.startswith(compartment_group)].columns.tolist()
+            
+        for drop in [True, False]:
+            
+            if drop:
+                subset_df = df.drop(compartment_features, axis="columns")
+                dropped_or_exclusive = "dropped"
+                use_features = subset_df.drop(meta_features, axis="columns").columns.tolist()
+            else:
+                subset_df = df.loc[:, meta_features + compartment_features]
+                dropped_or_exclusive = "exclusive"
+                use_features = compartment_features
 
-        result = evaluate(
-            profiles=subset_df.query("Metadata_cell_line == @cell_line"),
-            features=compartment_features,
-            meta_features=[barcode_col, gene_col],
-            replicate_groups=replicate_group_grit,
-            operation="grit",
-            similarity_metric="pearson",
-            grit_control_perts=control_barcodes
-        ).assign(
-            cell_line=cell_line,
-            barcode_control="cutting_control",
-            cor_method="pearson",
-            compartment=compartment,
-            channel="all",
-            feature_group=feature_group,
-            num_features=len(compartment_features)
-        )
-        
-        grit_subcompartment_results.append(result)
+            result = evaluate(
+                profiles=subset_df.query("Metadata_cell_line == @cell_line"),
+                features=use_features,
+                meta_features=[barcode_col, gene_col],
+                replicate_groups=replicate_group_grit,
+                operation="grit",
+                similarity_metric="pearson",
+                grit_control_perts=control_barcodes
+            ).assign(
+                cell_line=cell_line,
+                barcode_control="cutting_control",
+                cor_method="pearson",
+                compartment=compartment,
+                channel="all",
+                feature_group=feature_group,
+                num_features=len(compartment_features),
+                dropped_or_exclusive=dropped_or_exclusive
+            )
+
+            grit_subcompartment_results.append(result)
         
 grit_subcompartment_results = pd.concat(grit_subcompartment_results).reset_index(drop=True)
 
@@ -160,30 +181,38 @@ grit_channel_results = []
 for cell_line in df.Metadata_cell_line.unique():
     for channel in channels:
         channel_features = df.loc[:, df.columns.str.contains(channel)].columns.tolist()
-
-        subset_df = df.loc[:, meta_features + compartment_features]
         
-        compartment, feature_group = compartment_group.split("_")
+        for drop in [True, False]:
+            
+            if drop:
+                subset_df = df.drop(channel_features, axis="columns")
+                dropped_or_exclusive = "dropped"
+                use_features = subset_df.drop(meta_features, axis="columns").columns.tolist()
+            else:
+                subset_df = df.loc[:, meta_features + channel_features]
+                dropped_or_exclusive = "exclusive"
+                use_features = channel_features
 
-        result = evaluate(
-            profiles=subset_df.query("Metadata_cell_line == @cell_line"),
-            features=compartment_features,
-            meta_features=[barcode_col, gene_col],
-            replicate_groups=replicate_group_grit,
-            operation="grit",
-            similarity_metric="pearson",
-            grit_control_perts=control_barcodes
-        ).assign(
-            cell_line=cell_line,
-            barcode_control="cutting_control",
-            cor_method="pearson",
-            compartment="all",
-            channel=channel,
-            feature_group="all",
-            num_features=len(channel_features)
-        )
-        
-        grit_channel_results.append(result)
+            result = evaluate(
+                profiles=subset_df.query("Metadata_cell_line == @cell_line"),
+                features=use_features,
+                meta_features=[barcode_col, gene_col],
+                replicate_groups=replicate_group_grit,
+                operation="grit",
+                similarity_metric="pearson",
+                grit_control_perts=control_barcodes
+            ).assign(
+                cell_line=cell_line,
+                barcode_control="cutting_control",
+                cor_method="pearson",
+                compartment="all",
+                channel=channel,
+                feature_group="all",
+                num_features=len(channel_features),
+                dropped_or_exclusive=dropped_or_exclusive
+            )
+
+            grit_channel_results.append(result)
         
 grit_channel_results = pd.concat(grit_channel_results).reset_index(drop=True)
 
