@@ -195,6 +195,19 @@ grit_ceres_comparison_gg
 # In[13]:
 
 
+(
+    cell_health_results_df
+    .query("ceres_score > -1.1")
+    .query("grit_mean > 2")
+    .query("barcode_control == 'cutting_control'")
+    .sort_values(by="ceres_score", ascending=False)
+    .reset_index(drop=True)
+)
+
+
+# In[14]:
+
+
 # What are the perturbations with high grit and low ceres scores?
 (
     cell_health_results_df
@@ -206,7 +219,7 @@ grit_ceres_comparison_gg
 )
 
 
-# In[14]:
+# In[15]:
 
 
 control_compare_df = (
@@ -220,7 +233,7 @@ control_compare_df = (
 control_compare_df.head()
 
 
-# In[15]:
+# In[16]:
 
 
 grit_barcode_comparison_gg = (
