@@ -103,3 +103,52 @@ mp_value_comparison_gg.save(output_file, dpi=500, height=3, width=6.5)
 
 mp_value_comparison_gg
 
+
+# ## Overlay replicate correlation
+
+# In[7]:
+
+
+reprod_file = pathlib.Path(f"{results_dir}/cell_health_replicate_reproducibility.tsv")
+reprod_df = pd.read_csv(reprod_file, sep="\t")
+
+print(reprod_df.shape)
+reprod_df.head()
+
+
+# In[8]:
+
+
+full_df = (
+    combined_df
+    .query("num_permutations == 5000")
+    .merge(
+        reprod_df,
+        on=["perturbation", "group", "cell_line"]
+    )
+)
+
+print(full_df.shape)
+full_df.head()
+
+
+# In[9]:
+
+
+mp_value_comparison_gg = (
+    gg.ggplot(full_df.dropna(), gg.aes(x="median_replicate_correlation", y="mp_value_neglog"))
+    + gg.geom_point(gg.aes(fill="cell_line", size="grit"), stroke=0.2, alpha=0.7)
+    + gg.geom_vline(xintercept=0, linetype="dotted", color="red")
+    + gg.scale_fill_manual(name="Cell Line", values=cell_line_colors)
+    + gg.xlab("Median replicate correlation")
+    + gg.ylab("-log10(mp-Value)")
+    + gg.theme_bw()
+    + gg.theme(strip_background=gg.element_rect(color="black", height=0.15, fill="#fdfff4"))
+)
+
+
+output_file = pathlib.Path(f"{output_dir}/cell_health_mpvalue_replicatereproducibility_comparison.png")
+mp_value_comparison_gg.save(output_file, dpi=500, height=3, width=6.5)
+
+mp_value_comparison_gg
+
