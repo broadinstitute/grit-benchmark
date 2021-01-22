@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# # Comparing grit to mp-value
+# 
+# mp-value was described in [Hutz et al. 2012](https://doi.org/10.1177/1087057112469257).
+# The mp-value metric calculates a Mahalanobis distance between treatment and control perturbations, and determines significance through random permutations.
+# The mp-value metric can be interpreted as an empirical p value indicating how different the treatment perturbations are from controls.
+
 # In[1]:
 
 
