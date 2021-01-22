@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# ## Compare Pearson and Spearman correlations
+# 
+# In grit, the user determines which similarity metric to use to compare profiles.
+# Here, we empirically compare Pearson and Spearman metrics to determine if either provides any benefit over the other.
+
 # In[1]:
 
 
