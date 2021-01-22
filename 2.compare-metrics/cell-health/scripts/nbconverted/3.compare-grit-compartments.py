@@ -226,9 +226,3 @@ channel_drop_gg.save(output_file, dpi=500, height=3, width=6)
 
 channel_drop_gg
 
-
-# In[ ]:
-
-
-
-
