@@ -17,6 +17,7 @@ dependencies:
 - conda-forge::matplotlib
 - conda-forge::plotnine
 - conda-forge::seaborn
+- conda-forge::umap-learn
 - conda-forge::black
 - conda-forge::nb_black
 - bioconda::mygene=3.1.0
