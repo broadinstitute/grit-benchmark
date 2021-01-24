@@ -26,20 +26,21 @@ import plotnine as gg
 
 
 # Load perturbseq results
-perturbseq_data_dir = pathlib.Path("../../1.calculate-metrics/perturb-seq/results")
+perturbseq_results_dir = pathlib.Path("../../1.calculate-metrics/perturb-seq/results")
+
 gse_id = "GSE132080"
-results_file = pathlib.Path(f"{perturbseq_data_dir}/{gse_id}_grit.tsv")
+results_file = pathlib.Path(f"{perturbseq_results_dir}/{gse_id}_grit.tsv")
 
 output_dir = "figures"
 
-grit_df = pd.read_csv(results_file, sep="\t")
+bulk_grit_df = pd.read_csv(results_file, sep="\t")
 
-grit_df.loc[:, "gene"] = pd.Categorical(
-    grit_df.gene, categories=grit_df.gene.unique()
+bulk_grit_df.loc[:, "gene"] = pd.Categorical(
+    bulk_grit_df.gene, categories=bulk_grit_df.gene.unique()
 )
 
-print(grit_df.shape)
-grit_df.head(2)
+print(bulk_grit_df.shape)
+bulk_grit_df.head(2)
 
 
 # In[3]:
@@ -47,7 +48,7 @@ grit_df.head(2)
 
 # Global view
 global_gg = (
-    gg.ggplot(grit_df, gg.aes(x="relative_activity_day5", y="grit")) +
+    gg.ggplot(bulk_grit_df, gg.aes(x="relative_activity_day5", y="grit")) +
     gg.geom_point(size=0.8) +
     gg.theme_bw() +
     gg.xlab("Relative Activity (Day 5)") +
@@ -65,7 +66,7 @@ global_gg
 
 
 gene_gg = (
-    gg.ggplot(grit_df, gg.aes(x="relative_activity_day5", y="grit")) +
+    gg.ggplot(bulk_grit_df, gg.aes(x="relative_activity_day5", y="grit")) +
     gg.geom_point(size=0.6) +
     gg.theme_bw() +
     gg.xlab("Relative Activity (Day 5)") +
@@ -89,28 +90,61 @@ gene_gg
 # In[5]:
 
 
-sc_results_file = pathlib.Path(f"{perturbseq_data_dir}/{gse_id}_single_cell_grit.tsv.gz")
+# Load perturbseq gene expression data
+perturbseq_data_dir = pathlib.Path("../../0.download-data/data/perturbseq/")
+
+gene_exp_file = pathlib.Path(f"{perturbseq_data_dir}/{gse_id}_final_analytical.tsv.gz")
+
+sc_gene_exp_df = pd.read_csv(gene_exp_file, sep="\t")
+
+print(sc_gene_exp_df.shape)
+sc_gene_exp_df.head()
+
+
+# In[6]:
+
+
+# Load single cell grit results
+sc_results_file = pathlib.Path(f"{perturbseq_results_dir}/{gse_id}_single_cell_grit.tsv.gz")
 sc_df = pd.read_csv(sc_results_file, sep="\t")
 
-sc_df.loc[:, "gene"] = pd.Categorical(
-    sc_df.gene, categories=grit_df.gene.unique()
+# Load UMAP embeddings
+sc_embeddings_file = pathlib.Path(f"{perturbseq_results_dir}/{gse_id}_single_cell_umap_embeddings.tsv.gz")
+sc_embeddings_df = pd.read_csv(sc_embeddings_file, sep="\t")
+
+sc_df = sc_embeddings_df.merge(
+    sc_df,
+    left_on=["Metadata_cell_identity", "grit_gene"],
+    right_on=["perturbation", "grit_gene"],
+    how="right"
+).merge(
+    bulk_grit_df,
+    left_on=["Metadata_guide_identity", "Metadata_gene_identity"],
+    right_on=["perturbation", "gene"],
+    how="outer",
+    suffixes=["", "_bulk_activity"]
 )
 
-sc_df.loc[:, "gene_identity"] = pd.Categorical(
-    sc_df.gene_identity, categories=["neg"] + grit_df.gene.unique().tolist()
+
+sc_df.loc[:, "gene"] = pd.Categorical(
+    sc_df.gene, categories=bulk_grit_df.gene.unique()
+)
+
+sc_df.loc[:, "Metadata_gene_identity"] = pd.Categorical(
+    sc_df.Metadata_gene_identity, categories=["neg"] + bulk_grit_df.gene.unique().tolist()
 )
 
 print(sc_df.shape)
 sc_df.head()
 
 
-# In[6]:
-
-
-sc_df.gene_identity.value_counts()
-
-
 # In[7]:
+
+
+sc_df.Metadata_gene_identity.value_counts()
+
+
+# In[8]:
 
 
 global_gg = (
@@ -129,7 +163,7 @@ global_gg.save(output_file, dpi=500, height=5, width=6)
 global_gg
 
 
-# In[8]:
+# In[9]:
 
 
 gene_gg = (
@@ -155,7 +189,9 @@ gene_gg.save(output_file, dpi=500, height=5, width=6)
 gene_gg
 
 
-# In[9]:
+# ## Plot individual UMAPs per gene
+
+# In[10]:
 
 
 for gene in sc_df.gene.unique():
@@ -172,17 +208,17 @@ for gene in sc_df.gene.unique():
             )
         )
     )
-    gene_embedding_df.loc[gene_embedding_df.gene_identity == "neg", "grit_facet_label"] = "Negative Ctrl"
-
+    
+    # Setup data frame for plotting
+    gene_embedding_df.loc[gene_embedding_df.Metadata_gene_identity == "neg", "grit_facet_label"] = "Negative Ctrl"
     facet_order = ["Negative Ctrl"] + [
         f"{gene_embedding_df.grit_gene.unique()[0]} "+ str(x) 
         for x in sorted(gene_embedding_df.relative_activity_day5.dropna().unique().round(3))
     ]
-    
     gene_embedding_df.loc[:, "grit_facet_label"] = pd.Categorical(
         gene_embedding_df.grit_facet_label, categories=facet_order
-    )
-        
+    ) 
+
     gene_gg = (
         gg.ggplot(gene_embedding_df.dropna(subset=["grit_facet_label"]), gg.aes(x="umap_0", y="umap_1")) +
         gg.geom_point(gg.aes(color="grit"), size=2, stroke=0, alpha=0.5) +
@@ -197,6 +233,31 @@ for gene in sc_df.gene.unique():
     
     output_file = pathlib.Path(f"{output_dir}/gene_umaps/{gse_id}_{gene}_singlecell_umap_grit.png")
     gene_gg.save(output_file, dpi=500, height=5, width=6)
-
     print(gene_gg)
+   
+    # Some genes were also directly measured. How does the expression of these look in UMAP space?
+    if gene in sc_gene_exp_df.columns:
+        meta_merge_cols = [x for x in sc_gene_exp_df.columns if x.startswith("Metadata_")]
+        sc_geneexp_embed_df = gene_embedding_df.merge(
+            sc_gene_exp_df,
+            on=meta_merge_cols,
+            how="left"
+        )
+        
+        geneexp_gg = (
+            gg.ggplot(sc_geneexp_embed_df.dropna(subset=["grit_facet_label"]), gg.aes(x="umap_0", y="umap_1")) +
+            gg.geom_point(gg.aes(color=gene), size=2, stroke=0, alpha=0.5) +
+            gg.ggtitle(f"Gene expression: {gene}") +
+            gg.facet_wrap("~grit_facet_label") +
+            gg.theme_bw() +
+            gg.xlab("UMAP 0") +
+            gg.ylab("UMAP 1") +
+            gg.theme(
+                strip_background=gg.element_rect(colour="black", fill="#fdfff4")
+            )
+        )
+        
+        output_file = pathlib.Path(f"{output_dir}/gene_umaps/{gse_id}_{gene}_singlecell_umap_expression.png")
+        geneexp_gg.save(output_file, dpi=500, height=5, width=6)
+        print(geneexp_gg)
 
