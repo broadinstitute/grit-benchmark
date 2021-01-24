@@ -84,7 +84,7 @@ bulk_df = aggregate(
     population_df=sc_df,
     strata=["guide_identity"],
     features=gene_features,
-    operation="median"
+    operation="median",
 )
 
 # Some genes have very small variance still, remove these!
@@ -93,18 +93,15 @@ genes_to_retain = (
     .reset_index()
     .rename({"index": "gene", 0: "keep"}, axis="columns")
     .query("keep")
-    .gene
-    .tolist()
+    .gene.tolist()
 )
 
 bulk_df = bulk_df.loc[:, ["guide_identity"] + genes_to_retain]
 
 # create a column for the gene
-bulk_df = (
-    bulk_df
-    .assign(gene_identity=[x.split("_")[0] for x in bulk_df.guide_identity])
-    .query("gene_identity != '*'")
-)
+bulk_df = bulk_df.assign(
+    gene_identity=[x.split("_")[0] for x in bulk_df.guide_identity]
+).query("gene_identity != '*'")
 
 print(bulk_df.shape)
 bulk_df.head()
@@ -120,10 +117,7 @@ neg_controls = [x for x in bulk_df.guide_identity if "neg_ctrl" in x]
 barcode_col = "guide_identity"
 gene_col = "gene_identity"
 
-replicate_group_grit = {
-    "replicate_id": barcode_col,
-    "group_id": gene_col
-}
+replicate_group_grit = {"replicate_id": barcode_col, "group_id": gene_col}
 
 result = evaluate(
     profiles=bulk_df,
@@ -131,7 +125,7 @@ result = evaluate(
     meta_features=[barcode_col, gene_col],
     replicate_groups=replicate_group_grit,
     operation="grit",
-    grit_control_perts=neg_controls
+    grit_control_perts=neg_controls,
 )
 
 result = result.dropna().sort_values(by="grit", ascending=False).reset_index(drop=True)
@@ -164,14 +158,11 @@ sc_df = sc_df.assign(gene_identity=[str(x).split("_")[0] for x in sc_df.guide_id
 sc_df = sc_df.reset_index().rename({"index": "cell_identity"}, axis="columns")
 neg_controls_df = sc_df.query("guide_identity in @neg_controls").sample(frac=0.2)
 
-sc_neg_controls = (
-    neg_controls_df
-    .query("guide_identity in @neg_controls")
-    .cell_identity
-    .tolist()
-)
+sc_neg_controls = neg_controls_df.query(
+    "guide_identity in @neg_controls"
+).cell_identity.tolist()
 
-replicate_group_grit = {'replicate_id': 'cell_identity', 'group_id': 'guide_identity'}
+replicate_group_grit = {"replicate_id": "cell_identity", "group_id": "guide_identity"}
 
 
 # In[10]:
@@ -185,11 +176,11 @@ for gene in genes:
     if gene not in ["neg", "*", "nan"]:
         print(f"Now analyzing {gene}...")
         subset_sc_df = sc_df.query("gene_identity in @gene")
-        
+
         guides = subset_sc_df.guide_identity.unique()
-            
+
         subset_sc_df = pd.concat([subset_sc_df, neg_controls_df]).reset_index(drop=True)
-        
+
         # Apply UMAP to single cell profiles
         embedding = umap.UMAP().fit_transform(subset_sc_df.loc[:, genes_to_retain])
 
@@ -197,11 +188,11 @@ for gene in genes:
         embedding_df = pd.concat(
             [
                 subset_sc_df.drop(gene_features, axis="columns").reset_index(drop=True),
-                pd.DataFrame(embedding, columns=["umap_0", "umap_1"])
+                pd.DataFrame(embedding, columns=["umap_0", "umap_1"]),
             ],
-            axis="columns"
+            axis="columns",
         )
-        
+
         # Append to list
         embedding_df.cell_identity = embedding_df.cell_identity.astype(str)
         all_sc_umap_embeddings.append(embedding_df.assign(grit_gene=gene))
@@ -209,12 +200,9 @@ for gene in genes:
         # Now calculate sc-Grit per guide
         for guide in guides:
             subset_guide_df = pd.concat(
-                [
-                    subset_sc_df.query("guide_identity == @guide"),
-                    neg_controls_df
-                ]
+                [subset_sc_df.query("guide_identity == @guide"), neg_controls_df]
             ).reset_index(drop=True)
-            
+
             # Calculate Grit
             sc_grit_result = evaluate(
                 profiles=subset_guide_df,
@@ -222,9 +210,9 @@ for gene in genes:
                 meta_features=["guide_identity", "cell_identity"],
                 replicate_groups=replicate_group_grit,
                 operation="grit",
-                grit_control_perts=[str(x) for x in sc_neg_controls]
+                grit_control_perts=[str(x) for x in sc_neg_controls],
             )
-            
+
             all_sc_grit_results.append(
                 sc_grit_result.assign(grit_gene=gene, grit_guide=guide)
             )
@@ -255,13 +243,13 @@ embedding_df = all_sc_umap_embeddings.merge(
     all_sc_grit_results,
     left_on=["cell_identity", "grit_gene"],
     right_on=["perturbation", "grit_gene"],
-    how="right"
+    how="right",
 ).merge(
     activity_df,
     left_on=["guide_identity", "gene_identity"],
     right_on=["perturbation", "gene"],
     how="outer",
-    suffixes=["", "_activity"]
+    suffixes=["", "_activity"],
 )
 
 print(embedding_df.shape)
@@ -274,4 +262,3 @@ embedding_df.head()
 # Output file
 output_results_file = pathlib.Path(f"results/{gse_id}_single_cell_grit.tsv.gz")
 embedding_df.to_csv(output_results_file, sep="\t", compression="gzip", index=False)
-
