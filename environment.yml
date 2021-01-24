@@ -4,22 +4,23 @@ channels:
 - bioconda
 dependencies:
 - conda-forge::python
-- conda-forge::pandas=1.1.3
-- conda-forge::numpy=1.19.2
-- conda-forge::pathlib=1.0.1
-- conda-forge::requests=2.24.0
-- conda-forge::jupyter=1.0.0
-- conda-forge::jupyterlab=3.0.0
-- conda-forge::ipykernel=5.1.0
-- conda-forge::nb_conda_kernels=2.2.1
-- conda-forge::widgetsnbextension=3.5.1
-- conda-forge::jupyter_contrib_nbextensions=0.5.1
-- conda-forge::matplotlib=3.1.3
-- conda-forge::plotnine=0.7.1
-- conda-forge::seaborn=0.11.0
+- conda-forge::pandas=1.2
+- conda-forge::numpy
+- conda-forge::pathlib
+- conda-forge::requests
+- conda-forge::jupyter
+- conda-forge::jupyterlab
+- conda-forge::ipykernel
+- conda-forge::nb_conda_kernels
+- conda-forge::widgetsnbextension
+- conda-forge::jupyter_contrib_nbextensions
+- conda-forge::matplotlib
+- conda-forge::plotnine
+- conda-forge::seaborn
 - conda-forge::black
 - conda-forge::nb_black
 - bioconda::mygene=3.1.0
+- bioconda::phate=1.0.4
 - pip:
-  - git+https://github.com/cytomining/pycytominer@c1aa34b641b4e07eb5cbd424166f31355abdbd4d
-  - git+https://github.com/cytomining/cytominer-eval@56bd9e545d4ce5dea8c2d3897024a4eb241d06db
+  - git+https://github.com/cytomining/pycytominer@90fda6bc071825a526616130bd6ffe454cf17aaa
+  - git+https://github.com/cytomining/cytominer-eval@fdda99eda99737c952769e1f9b473eeb85950d80
