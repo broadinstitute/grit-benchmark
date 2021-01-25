@@ -28,12 +28,6 @@ reprod_file = pathlib.Path(f"{cell_health_dir}/cell_health_replicate_reproducibi
 # In[3]:
 
 
-cell_line_colors = {
-  "A549": "#861613",
-  "ES2": "#1CADA8",
-  "HCC44": "#2A364D"
-}
-
 replicate_reproducibility_theme = gg.theme(
     strip_background=gg.element_rect(color="black", fill="#fdfff4"),
     strip_text_x=gg.element_text(size=6),

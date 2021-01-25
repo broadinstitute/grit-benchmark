@@ -53,7 +53,6 @@ df = feature_select(
 features = infer_cp_features(df)
 meta_features = infer_cp_features(df, metadata=True)
 
-
 print(df.shape)
 df.head(2)
 
