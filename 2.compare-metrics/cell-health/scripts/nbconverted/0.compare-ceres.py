@@ -185,8 +185,7 @@ grit_ceres_comparison_gg
 
 
 (
-    cell_health_results_df
-    .query("ceres_score > -1.1")
+    cell_health_results_df.query("ceres_score > -1.1")
     .query("grit_mean > 2")
     .query("barcode_control == 'cutting_control'")
     .sort_values(by="ceres_score", ascending=False)
