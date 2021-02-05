@@ -20,6 +20,8 @@ from cytominer_eval.operations.util import assign_replicates
 # In[2]:
 
 
+output_dir = "results"
+
 file = pathlib.Path("data/cell_health_merged_feature_select.csv.gz")
 cell_health_df = pd.read_csv(file)
 
@@ -64,6 +66,25 @@ similarity_melted_df.head()
 # In[5]:
 
 
+non_replicate_cor_95th = (
+    similarity_melted_df
+    .query("not group_replicate")
+    .groupby("Metadata_cell_line_pair_a")["similarity_metric"]
+    .quantile(0.95)
+    .reset_index()
+    .rename({"Metadata_cell_line_pair_a": "cell_line"}, axis="columns")
+)
+
+# Output results
+output_file = pathlib.Path(f"{output_dir}/cell_health_nonreplicate_95thpercentile.tsv")
+
+non_replicate_cor_95th.to_csv(output_file, sep="\t", index=False)
+non_replicate_cor_95th
+
+
+# In[6]:
+
+
 # Capture median replicate correlation
 median_replicate_correlation_df = (
     similarity_melted_df
@@ -92,7 +113,7 @@ print(median_replicate_correlation_df.shape)
 median_replicate_correlation_df.head()
 
 
-# In[6]:
+# In[7]:
 
 
 median_empty_correlation_df = (
@@ -122,7 +143,7 @@ print(median_empty_correlation_df.shape)
 median_empty_correlation_df.head()
 
 
-# In[7]:
+# In[8]:
 
 
 full_correlation_results_df = (
@@ -142,11 +163,10 @@ print(full_correlation_results_df.shape)
 full_correlation_results_df.head()
 
 
-# In[8]:
+# In[9]:
 
 
 # Output results
-output_dir = "results"
 output_file = pathlib.Path(f"{output_dir}/cell_health_replicate_reproducibility.tsv")
 
 full_correlation_results_df.to_csv(output_file, sep="\t", index=False)
