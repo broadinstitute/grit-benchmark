@@ -32,12 +32,6 @@ print(cell_health_grit_df.shape)
 cell_health_grit_df.head()
 
 
-# In[7]:
-
-
-cell_health_grit_df.groupby("cell_line").agg({"grit": ["max", "min"]})
-
-
 # In[4]:
 
 
