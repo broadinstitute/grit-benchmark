@@ -18,6 +18,8 @@ Grit combines two concepts:
 Additionally, since grit is based on z-scores, the magnitude can be easily compared between perturbations _and is a directly interpretable value_.
 E.g. A grit score of 5 for `compound X` compared to a DMSO control means that "on average, compound X is 5 standard deviations more similar to replicates than to DMSO controls".
 
+![grit summary](media/Figure1A_Simple_Interpretation.png)
+
 ## Grit implementation
 
 We use the grit implementation in the [cytominer-eval](https://github.com/cytomining/cytominer-eval) python package.
