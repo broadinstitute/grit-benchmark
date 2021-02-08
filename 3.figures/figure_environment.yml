@@ -1,0 +1,29 @@
+name: grit-benchmark-figures
+channels:
+- conda-forge
+- bioconda
+dependencies:
+- conda-forge::python
+- conda-forge::pandas=1.2
+- conda-forge::numpy
+- conda-forge::pathlib
+- conda-forge::requests
+- conda-forge::jupyter
+- conda-forge::jupyterlab
+- conda-forge::ipykernel
+- conda-forge::nb_conda_kernels
+- conda-forge::widgetsnbextension
+- conda-forge::jupyter_contrib_nbextensions
+- conda-forge::black
+- conda-forge::r-base
+- conda-forge::r-irkernel
+- conda-forge::r-dplyr=1.0.4
+- conda-forge::r-tidyr
+- conda-forge::r-readr
+- conda-forge::r-ggplot2=3.3.3
+- conda-forge::r-ggrepel
+- conda-forge::r-patchwork
+- conda-forge::r-cowplot
+- conda-forge::r-gridextra
+- conda-forge::r-magick=2.6.0
+- conda-forge::imagemagick=7.0.10_0
