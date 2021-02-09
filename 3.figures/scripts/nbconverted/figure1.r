@@ -5,6 +5,8 @@ suppressPackageStartupMessages(library(RColorBrewer))
 suppressPackageStartupMessages(library(patchwork))
 suppressPackageStartupMessages(library(magick))
 
+source(file.path("utils", "themes.R"))
+
 # Set file names
 output_dir <- "figures"
 
@@ -109,23 +111,6 @@ sc_umap_cols <- readr::cols(
 sc_grit_df <- readr::read_tsv(sc_grit_file, col_types = sc_grit_cols)
 sc_umap_df <- readr::read_tsv(sc_umap_file, col_types = sc_umap_cols)
 
-# Set plotting constants
-cell_line_colors <- c(
-  "A549" = "#861613",
-  "ES2" = "#1CADA8",
-  "HCC44" = "#2A364D"
-)
-
-fig1_theme <- theme_bw() +
-    theme(
-        axis.title = element_text(size = 9),
-        axis.text = element_text(size = 8),
-        legend.title = element_text(size = 8),
-        legend.text = element_text(size = 8),
-        strip.background = element_rect(color = "black", fill = "#fdfff4"),
-        strip.text = element_text(size = 7)
-    )
-
 url <- "https://raw.githubusercontent.com/broadinstitute/grit-benchmark/2a4b0edc3d96b67b59d5071a4c3abb201725ac37/media/Figure1A_Simple_Interpretation.png"
 panel_a_gg <- magick::image_ggplot(
     magick::image_scale(
@@ -181,7 +166,7 @@ mean_grit_gg <- (
     )
     + xlab("Grit")
     + ylab("Density")
-    + fig1_theme
+    + custom_grit_theme
     + labs(tag = "b")
 )
 
@@ -207,7 +192,7 @@ replicate_reprod_panel <- (
     + geom_hline(yintercept = mean(nonrep_df$similarity_metric), linetype = "dashed", color = "blue")
     + ylab("Median replicate correlation")
     + xlab("Median control correlation")
-    + fig1_theme
+    + custom_grit_theme
     + labs(tag = "c")
 )
 
@@ -235,7 +220,7 @@ ceres_panel_gg = (
     + scale_size_continuous(guide = FALSE, range = c(0.2, 2.5))
     + xlab("Grit")
     + ylab("CERES")
-    + fig1_theme
+    + custom_grit_theme
     + labs(tag = "d")
 )
 
@@ -274,21 +259,19 @@ focus_plot_df$Metadata_pert_name <- factor(
 focus_plot_df <- focus_plot_df %>%
     dplyr::filter(Metadata_pert_name %in% pert_order)
 
-myPalette <- colorRampPalette(rev(brewer.pal(9, "PuBuGn")))
-
 gene_umap_gg = (
     ggplot(focus_plot_df, aes(x = umap_0, y = umap_1))
     + geom_point(aes(fill = grit), pch = 21, size = 0.6, stroke = 0.1, alpha = 0.7)
     + facet_wrap("~Metadata_pert_name", nrow = 2)
     + scale_fill_gradientn(
         name = "scGrit",
-        colors = myPalette(10),
+        colors = scgrit_palette(10),
         values = scales::rescale(c(2, 1.4, 1.1)),
         limits = c(-0.7, 2.1)
     )
     + xlab("UMAP 0")
     + ylab("UMAP 1")
-    + fig1_theme
+    + custom_grit_theme
     + labs(tag = "e")
 )
 
