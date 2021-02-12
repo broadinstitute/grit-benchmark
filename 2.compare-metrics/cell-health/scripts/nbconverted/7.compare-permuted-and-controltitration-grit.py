@@ -55,6 +55,16 @@ permuted_grit_df.shuffle_method = pd.Categorical(
     ],
 )
 
+permuted_grit_df.norm_method = pd.Categorical(
+    permuted_grit_df.norm_method.replace(
+        {
+            "ctrl_based": "Using EMPTY controls",
+            "whole_plate": "Whole plate",
+        }
+    ),
+    categories=["Using EMPTY controls", "Whole plate"],
+)
+
 print(permuted_grit_df.shape)
 permuted_grit_df.head()
 
@@ -79,6 +89,16 @@ titration_grit_df.num_controls = pd.Categorical(
 )
 
 titration_grit_df.random_iteration = titration_grit_df.random_iteration.astype(str)
+
+titration_grit_df.norm_method = pd.Categorical(
+    titration_grit_df.norm_method.replace(
+        {
+            "ctrl_based": "Using EMPTY controls",
+            "whole_plate": "Whole plate",
+        }
+    ),
+    categories=["Using EMPTY controls", "Whole plate"],
+)
 
 print(titration_grit_df.shape)
 titration_grit_df.head()
@@ -138,13 +158,17 @@ grit_permuted_gg = (
     + gg.theme_bw()
     + gg.xlab("Grit")
     + gg.ylab("Density")
+    + gg.geom_vline(xintercept=[-1, 1], color="blue", linetype="dashed")
     + gg.ggtitle(f"Cell Health (ES2 Plate {plate})")
-    + gg.facet_wrap("~shuffle_method", nrow=3)
-    + gg.theme(strip_background=gg.element_rect(color="black", fill="#fdfff4"))
+    + gg.facet_grid("norm_method~shuffle_method")
+    + gg.theme(
+        strip_background=gg.element_rect(color="black", fill="#fdfff4"),
+        strip_text=gg.element_text(size=7),
+    )
 )
 
 output_file = pathlib.Path(f"{output_dir}/cell_health_grit_permuted_comparison.png")
-grit_permuted_gg.save(output_file, dpi=500, height=5, width=4)
+grit_permuted_gg.save(output_file, dpi=500, height=5, width=9)
 
 grit_permuted_gg
 
@@ -156,9 +180,34 @@ grit_control_count_gg = (
     gg.ggplot(titration_grit_df, gg.aes(x="num_controls", y="grit"))
     + gg.geom_boxplot(gg.aes(fill="random_iteration"))
     + gg.theme_bw()
+    + gg.facet_wrap("~norm_method", nrow=2)
+    + gg.theme(
+        strip_background=gg.element_rect(color="black", fill="#fdfff4"),
+        strip_text=gg.element_text(size=7),
+    )
 )
 
 output_file = pathlib.Path(f"{output_dir}/cell_health_grit_controltitration.png")
-grit_control_count_gg.save(output_file, dpi=500, height=3.5, width=4)
+grit_control_count_gg.save(output_file, dpi=500, height=7, width=4)
+
+grit_control_count_gg
+
+
+# In[9]:
+
+
+grit_control_count_gg = (
+    gg.ggplot(titration_grit_df.query("grit < 5"), gg.aes(x="num_controls", y="grit"))
+    + gg.geom_boxplot(gg.aes(fill="random_iteration"))
+    + gg.theme_bw()
+    + gg.facet_wrap("~norm_method", nrow=2)
+    + gg.theme(
+        strip_background=gg.element_rect(color="black", fill="#fdfff4"),
+        strip_text=gg.element_text(size=7),
+    )
+)
+
+output_file = pathlib.Path(f"{output_dir}/cell_health_grit_controltitration_zoom.png")
+grit_control_count_gg.save(output_file, dpi=500, height=7, width=4)
 
 grit_control_count_gg
