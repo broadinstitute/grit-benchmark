@@ -33,8 +33,8 @@ np.random.seed(2021)
 
 
 # Set grit constants
-sample_frac = 0.02
-control_group_genes_cut = ["Chr2", "Luc", "LacZ"]
+sample_frac = 0.04
+control_group_genes_cut = ["Chr2"]
 
 exclude_grit_genes = control_group_genes_cut + ["EMPTY"]
 
@@ -161,14 +161,14 @@ for plate in plate_files:
             
     # Output results
     all_sc_umap_embeddings = pd.concat(all_sc_umap_embeddings).reset_index(drop=True)
-    output_results_file = pathlib.Path(f"results/cellhealth_single_cell_umap_embeddings_{plate}.tsv.gz")
+    output_results_file = pathlib.Path(f"results/cellhealth_single_cell_umap_embeddings_{plate}_chr2.tsv.gz")
     all_sc_umap_embeddings.to_csv(output_results_file, sep="\t", compression="gzip", index=False)
 
     all_sc_phate_embeddings = pd.concat(all_sc_phate_embeddings).reset_index(drop=True)
-    output_results_file = pathlib.Path(f"results/cellhealth_single_cell_phate_embeddings_{plate}.tsv.gz")
+    output_results_file = pathlib.Path(f"results/cellhealth_single_cell_phate_embeddings_{plate}_chr2.tsv.gz")
     all_sc_phate_embeddings.to_csv(output_results_file, sep="\t", compression="gzip", index=False)
 
     all_sc_grit_results = pd.concat(all_sc_grit_results).reset_index(drop=True)
-    output_results_file = pathlib.Path(f"results/cellhealth_single_cell_grit_{plate}.tsv.gz")
+    output_results_file = pathlib.Path(f"results/cellhealth_single_cell_grit_{plate}_chr2.tsv.gz")
     all_sc_grit_results.to_csv(output_results_file, sep="\t", compression="gzip", index=False)
 

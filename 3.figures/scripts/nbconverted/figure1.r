@@ -23,8 +23,8 @@ commit <- "7d63d4a43014c757fd0c77c0fd1c19540f17cc3d"
 count_file <- paste0("https://raw.githubusercontent.com/broadinstitute/cell-health/", commit, "/1.generate-profiles/tables/cell_count_summary.tsv")
 
 sc_plate <- "SQ00014613"
-sc_grit_file <- file.path(cell_health_dir, paste0("cellhealth_single_cell_grit_", sc_plate, ".tsv.gz"))
-sc_umap_file <- file.path(cell_health_dir, paste0("cellhealth_single_cell_umap_embeddings_", sc_plate, ".tsv.gz"))
+sc_grit_file <- file.path(cell_health_dir, paste0("cellhealth_single_cell_grit_", sc_plate, "_chr2.tsv.gz"))
+sc_umap_file <- file.path(cell_health_dir, paste0("cellhealth_single_cell_umap_embeddings_", sc_plate, "_chr2.tsv.gz"))
 
 # Load data
 grit_cols <- readr::cols(

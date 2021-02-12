@@ -19,7 +19,7 @@ import plotnine as gg
 
 figure_dir = pathlib.Path("figures/single_cell")
 
-control_group_genes_cut = ["Chr2", "Luc", "LacZ"]
+control_group_genes_cut = ["Chr2"]
 
 plates = [
     "SQ00014613",
@@ -38,7 +38,7 @@ files = {prefix: {plate: []} for prefix in results_prefixes for plate in plates}
 for plate in plates:
     for prefix in results_prefixes:
         file_prefix = results_prefixes[prefix]
-        files[prefix][plate] = pathlib.Path(f"{results_dir}/{file_prefix}{plate}.tsv.gz")
+        files[prefix][plate] = pathlib.Path(f"{results_dir}/{file_prefix}{plate}_chr2.tsv.gz")
 
 files
 
