@@ -2,15 +2,15 @@
 # coding: utf-8
 
 # # Visualize grit calculated per compartment
-# 
+#
 # Previously, we calculated grit using the following subsets:
-# 
+#
 # * Per compartment (Cells, Cytoplasm, Nuclei)
 # * Per compartment feature group (Cells x AreaShape, Cells x Correlation, Nuclei x Texture, etc.)
 # * Per channel (DNA, RNA, AGP, ER, Mito)
 #     * Use all features that include any information from one of these channels
 # * No feature subsetting
-# 
+#
 # Here, we visualize these results.
 
 # In[1]:
@@ -28,17 +28,15 @@ output_dir = pathlib.Path("figures/compartment_drop")
 
 cell_health_dir = pathlib.Path("../../1.calculate-metrics/cell-health/results")
 grit_file = pathlib.Path(f"{cell_health_dir}/cell_health_grit.tsv")
-compartment_grit_file = pathlib.Path(f"{cell_health_dir}/cell_health_grit_compartments.tsv.gz")
+compartment_grit_file = pathlib.Path(
+    f"{cell_health_dir}/cell_health_grit_compartments.tsv.gz"
+)
 
 
 # In[3]:
 
 
-cell_line_colors = {
-  "A549": "#861613",
-  "ES2": "#1CADA8",
-  "HCC44": "#2A364D"
-}
+cell_line_colors = {"A549": "#861613", "ES2": "#1CADA8", "HCC44": "#2A364D"}
 
 compartment_drop_theme = gg.theme(
     strip_background=gg.element_rect(color="black", fill="#fdfff4"),
@@ -47,13 +45,15 @@ compartment_drop_theme = gg.theme(
     axis_title=gg.element_text(size=8),
     legend_title=gg.element_text(size=6),
     legend_text=gg.element_text(size=5),
-    panel_grid=gg.element_line(size=0.35)
+    panel_grid=gg.element_line(size=0.35),
 )
 
 grit_results = (
     pd.read_csv(grit_file, sep="\t")
     .assign(compartment="all", feature_group="all", channel="all")
     .query("barcode_control == 'cutting_control'")
+    .query("grit_replicate_summary_method == 'mean'")
+    .query("cor_method == 'pearson'")
 )
 
 grit_results = grit_results.assign(num_features=grit_results.shape[0])
@@ -66,18 +66,12 @@ compartment_grit_results = pd.read_csv(compartment_grit_file, sep="\t")
 
 
 per_compartment_df = (
-    compartment_grit_results
-    .query("compartment != 'all'")
+    compartment_grit_results.query("compartment != 'all'")
     .query("feature_group == 'all'")
     .query("channel == 'all'")
 )
 
-print(
-    pd.crosstab(
-        per_compartment_df.num_features,
-        per_compartment_df.compartment
-    )
-)
+print(pd.crosstab(per_compartment_df.num_features, per_compartment_df.compartment))
 
 print(per_compartment_df.shape)
 per_compartment_df.head()
@@ -86,19 +80,16 @@ per_compartment_df.head()
 # In[5]:
 
 
-per_compartment_df = (
-    per_compartment_df
-    .pivot(
-        index=["perturbation", "group", "cell_line", "compartment"],
-        values="grit",
-        columns="dropped_or_exclusive"
-    )
-    .reset_index()
-)
+per_compartment_df = per_compartment_df.pivot(
+    index=["perturbation", "group", "cell_line", "compartment"],
+    values="grit",
+    columns="dropped_or_exclusive",
+).reset_index()
 
 per_compartment_df = (
-    per_compartment_df
-    .assign(channel_signal = per_compartment_df.exclusive - per_compartment_df.dropped)
+    per_compartment_df.assign(
+        channel_signal=per_compartment_df.exclusive - per_compartment_df.dropped
+    )
     .sort_values(by="channel_signal", ascending=False)
     .reset_index(drop=True)
 )
@@ -135,21 +126,29 @@ compartment_drop_gg
 
 
 per_featuregroup_df = (
-    compartment_grit_results
-    .query("compartment != 'all'")
+    compartment_grit_results.query("compartment != 'all'")
     .query("feature_group != 'all'")
     .query("channel == 'all'")
     .query("feature_group != 'Location'")
     .pivot(
-        index=["perturbation", "group", "cell_line", "channel", "feature_group", "compartment"],
+        index=[
+            "perturbation",
+            "group",
+            "cell_line",
+            "channel",
+            "feature_group",
+            "compartment",
+        ],
         values="grit",
-        columns="dropped_or_exclusive")
+        columns="dropped_or_exclusive",
+    )
     .reset_index()
 )
 
 per_featuregroup_df = (
-    per_featuregroup_df
-    .assign(channel_signal = per_featuregroup_df.exclusive - per_featuregroup_df.dropped)
+    per_featuregroup_df.assign(
+        channel_signal=per_featuregroup_df.exclusive - per_featuregroup_df.dropped
+    )
     .sort_values(by="channel_signal", ascending=False)
     .reset_index(drop=True)
 )
@@ -186,17 +185,21 @@ feature_group_drop_gg
 
 
 per_channel_df = (
-    compartment_grit_results
-    .query("compartment == 'all'")
+    compartment_grit_results.query("compartment == 'all'")
     .query("feature_group == 'all'")
     .query("channel != 'all'")
-    .pivot(index=["perturbation", "group", "cell_line", "channel"], values="grit", columns="dropped_or_exclusive")
+    .pivot(
+        index=["perturbation", "group", "cell_line", "channel"],
+        values="grit",
+        columns="dropped_or_exclusive",
+    )
     .reset_index()
 )
 
 per_channel_df = (
-    per_channel_df
-    .assign(channel_signal = per_channel_df.exclusive - per_channel_df.dropped)
+    per_channel_df.assign(
+        channel_signal=per_channel_df.exclusive - per_channel_df.dropped
+    )
     .sort_values(by="channel_signal", ascending=False)
     .reset_index(drop=True)
 )
@@ -225,4 +228,3 @@ output_file = pathlib.Path(f"{output_dir}/cell_health_grit_channel_drop.png")
 channel_drop_gg.save(output_file, dpi=500, height=3, width=6)
 
 channel_drop_gg
-

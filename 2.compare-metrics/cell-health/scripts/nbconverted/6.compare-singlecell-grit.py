@@ -2,7 +2,7 @@
 # coding: utf-8
 
 # ## Visualize the results of single cell grit
-# 
+#
 # Note, this is only for the ES2 cells
 
 # In[1]:
@@ -31,14 +31,16 @@ results_dir = pathlib.Path("../../1.calculate-metrics/cell-health/results")
 results_prefixes = {
     "grit": "cellhealth_single_cell_grit_",
     "phate": "cellhealth_single_cell_phate_embeddings_",
-    "umap": "cellhealth_single_cell_umap_embeddings_"
+    "umap": "cellhealth_single_cell_umap_embeddings_",
 }
 
 files = {prefix: {plate: []} for prefix in results_prefixes for plate in plates}
 for plate in plates:
     for prefix in results_prefixes:
         file_prefix = results_prefixes[prefix]
-        files[prefix][plate] = pathlib.Path(f"{results_dir}/{file_prefix}{plate}_chr2.tsv.gz")
+        files[prefix][plate] = pathlib.Path(
+            f"{results_dir}/{file_prefix}{plate}_chr2.tsv.gz"
+        )
 
 files
 
@@ -56,35 +58,34 @@ for plate in plates:
         umap_gene_df = umap_df.query("grit_gene == @gene").merge(
             grit_df.query("grit_gene == @gene"),
             left_on=["Metadata_cell_identity"],
-            right_on=["perturbation"]
+            right_on=["perturbation"],
         )
-        
+
         phate_gene_df = phate_df.query("grit_gene == @gene").merge(
             grit_df.query("grit_gene == @gene"),
             left_on=["Metadata_cell_identity"],
-            right_on=["perturbation"]
+            right_on=["perturbation"],
         )
 
-
         control_perts = (
-            umap_gene_df
-            .query("Metadata_gene_name in @control_group_genes_cut")
-            .Metadata_pert_name
-            .unique()
+            umap_gene_df.query("Metadata_gene_name in @control_group_genes_cut")
+            .Metadata_pert_name.unique()
             .tolist()
         )
 
         test_perts = (
-            umap_gene_df
-            .query("Metadata_pert_name not in @control_perts")
-            .Metadata_pert_name
-            .unique()
+            umap_gene_df.query("Metadata_pert_name not in @control_perts")
+            .Metadata_pert_name.unique()
             .tolist()
         )
 
         pert_order = test_perts + control_perts
-        umap_gene_df.Metadata_pert_name = pd.Categorical(umap_gene_df.Metadata_pert_name, categories=pert_order)
-        phate_gene_df.Metadata_pert_name = pd.Categorical(phate_gene_df.Metadata_pert_name, categories=pert_order)
+        umap_gene_df.Metadata_pert_name = pd.Categorical(
+            umap_gene_df.Metadata_pert_name, categories=pert_order
+        )
+        phate_gene_df.Metadata_pert_name = pd.Categorical(
+            phate_gene_df.Metadata_pert_name, categories=pert_order
+        )
 
         gene_umap_gg = (
             gg.ggplot(umap_gene_df, gg.aes(x="umap_0", y="umap_1"))
@@ -93,10 +94,10 @@ for plate in plates:
             + gg.theme_bw()
             + gg.theme(strip_background=gg.element_rect(color="black", fill="#fdfff4"))
         )
-        
+
         fig_file = pathlib.Path(f"{figure_dir}/{gene}_{plate}_umap.png")
         gene_umap_gg.save(fig_file, dpi=500, height=5, width=6)
-        
+
         gene_phate_gg = (
             gg.ggplot(phate_gene_df, gg.aes(x="phate_0", y="phate_1"))
             + gg.geom_point(gg.aes(fill="grit"), size=0.6, stroke=0.1, alpha=0.7)
@@ -104,7 +105,6 @@ for plate in plates:
             + gg.theme_bw()
             + gg.theme(strip_background=gg.element_rect(color="black", fill="#fdfff4"))
         )
-        
+
         fig_file = pathlib.Path(f"{figure_dir}/{gene}_{plate}_phate.png")
         gene_phate_gg.save(fig_file, dpi=500, height=5, width=6)
-
