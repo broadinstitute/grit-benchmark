@@ -2,7 +2,7 @@
 # coding: utf-8
 
 # ## Compare grit in two simulated cases:
-# 
+#
 # 1. Permuted with random shuffles
 # 2. Titrating different number of controls
 
@@ -44,10 +44,25 @@ permuted_grit_df.shuffle_method = pd.Categorical(
             "independent_column": "All columns shuffled",
             "full_metadata_shuffle": "Only metadata shuffled",
             "metadata_shuffle_ctrl_fixed": "Only metadata shuffled (controls fixed)",
-            "real": "Real"
+            "real": "Real",
         }
     ),
-    categories=["All columns shuffled", "Only metadata shuffled", "Only metadata shuffled (controls fixed)", "Real"]
+    categories=[
+        "All columns shuffled",
+        "Only metadata shuffled",
+        "Only metadata shuffled (controls fixed)",
+        "Real",
+    ],
+)
+
+permuted_grit_df.norm_method = pd.Categorical(
+    permuted_grit_df.norm_method.replace(
+        {
+            "ctrl_based": "Using EMPTY controls",
+            "whole_plate": "Whole plate",
+        }
+    ),
+    categories=["Using EMPTY controls", "Whole plate"],
 )
 
 print(permuted_grit_df.shape)
@@ -70,10 +85,20 @@ titration_grit_df = pd.read_csv(file, sep="\t").dropna()
 
 titration_grit_df.num_controls = pd.Categorical(
     titration_grit_df.num_controls.astype(str),
-    categories=[str(x) for x in sorted(titration_grit_df.num_controls.unique())]
+    categories=[str(x) for x in sorted(titration_grit_df.num_controls.unique())],
 )
 
 titration_grit_df.random_iteration = titration_grit_df.random_iteration.astype(str)
+
+titration_grit_df.norm_method = pd.Categorical(
+    titration_grit_df.norm_method.replace(
+        {
+            "ctrl_based": "Using EMPTY controls",
+            "whole_plate": "Whole plate",
+        }
+    ),
+    categories=["Using EMPTY controls", "Whole plate"],
+)
 
 print(titration_grit_df.shape)
 titration_grit_df.head()
@@ -83,8 +108,7 @@ titration_grit_df.head()
 
 
 cell_health_update_df = (
-    permuted_grit_df
-    .query("barcode_control == 'cutting_control'")
+    permuted_grit_df.query("barcode_control == 'cutting_control'")
     .query("cor_method == 'pearson'")
     .query("random_iteration == 'real'")
     .query("shuffle_method == 'Real'")
@@ -93,8 +117,7 @@ cell_health_update_df = (
 cell_health_update_df.shuffle_method = "All columns shuffled"
 
 cell_health_update_construct_df = (
-    permuted_grit_df
-    .query("barcode_control == 'cutting_control'")
+    permuted_grit_df.query("barcode_control == 'cutting_control'")
     .query("cor_method == 'pearson'")
     .query("random_iteration == 'real'")
     .query("shuffle_method == 'Real'")
@@ -104,39 +127,48 @@ cell_health_update_construct_df = (
 cell_health_update_construct_df.shuffle_method = "Only metadata shuffled"
 
 cell_health_update_construct_two_df = (
-    permuted_grit_df
-    .query("barcode_control == 'cutting_control'")
+    permuted_grit_df.query("barcode_control == 'cutting_control'")
     .query("cor_method == 'pearson'")
     .query("random_iteration == 'real'")
     .query("shuffle_method == 'Real'")
     .assign(grit_type="real")
 )
 
-cell_health_update_construct_two_df.shuffle_method = "Only metadata shuffled (controls fixed)"
+cell_health_update_construct_two_df.shuffle_method = (
+    "Only metadata shuffled (controls fixed)"
+)
 
 cell_health_update_df = pd.concat(
-    [cell_health_update_df, cell_health_update_construct_df, cell_health_update_construct_two_df],
-    axis="rows"
+    [
+        cell_health_update_df,
+        cell_health_update_construct_df,
+        cell_health_update_construct_two_df,
+    ],
+    axis="rows",
 )
 
 grit_permuted_gg = (
-    gg.ggplot(
-        gg.aes(x="grit")
-    ) +
-    gg.geom_density(gg.aes(fill="grit_type"), data=cell_health_update_df, alpha=0.5) +
-    gg.geom_density(gg.aes(color="random_iteration"),
-                    data=permuted_grit_df.query("random_iteration != 'real'"),
-                    alpha=0.5) +
-    gg.theme_bw() +
-    gg.xlab("Grit") +
-    gg.ylab("Density") +
-    gg.ggtitle(f"Cell Health (ES2 Plate {plate})") +
-    gg.facet_wrap("~shuffle_method", nrow=3) +
-    gg.theme(strip_background=gg.element_rect(color="black", fill="#fdfff4"))
+    gg.ggplot(gg.aes(x="grit"))
+    + gg.geom_density(gg.aes(fill="grit_type"), data=cell_health_update_df, alpha=0.5)
+    + gg.geom_density(
+        gg.aes(color="random_iteration"),
+        data=permuted_grit_df.query("random_iteration != 'real'"),
+        alpha=0.5,
+    )
+    + gg.theme_bw()
+    + gg.xlab("Grit")
+    + gg.ylab("Density")
+    + gg.geom_vline(xintercept=[-1, 1], color="blue", linetype="dashed")
+    + gg.ggtitle(f"Cell Health (ES2 Plate {plate})")
+    + gg.facet_grid("norm_method~shuffle_method")
+    + gg.theme(
+        strip_background=gg.element_rect(color="black", fill="#fdfff4"),
+        strip_text=gg.element_text(size=7),
+    )
 )
 
 output_file = pathlib.Path(f"{output_dir}/cell_health_grit_permuted_comparison.png")
-grit_permuted_gg.save(output_file, dpi=500, height=5, width=4)
+grit_permuted_gg.save(output_file, dpi=500, height=5, width=9)
 
 grit_permuted_gg
 
@@ -148,10 +180,34 @@ grit_control_count_gg = (
     gg.ggplot(titration_grit_df, gg.aes(x="num_controls", y="grit"))
     + gg.geom_boxplot(gg.aes(fill="random_iteration"))
     + gg.theme_bw()
+    + gg.facet_wrap("~norm_method", nrow=2)
+    + gg.theme(
+        strip_background=gg.element_rect(color="black", fill="#fdfff4"),
+        strip_text=gg.element_text(size=7),
+    )
 )
 
 output_file = pathlib.Path(f"{output_dir}/cell_health_grit_controltitration.png")
-grit_control_count_gg.save(output_file, dpi=500, height=3.5, width=4)
+grit_control_count_gg.save(output_file, dpi=500, height=7, width=4)
 
 grit_control_count_gg
 
+
+# In[9]:
+
+
+grit_control_count_gg = (
+    gg.ggplot(titration_grit_df.query("grit < 5"), gg.aes(x="num_controls", y="grit"))
+    + gg.geom_boxplot(gg.aes(fill="random_iteration"))
+    + gg.theme_bw()
+    + gg.facet_wrap("~norm_method", nrow=2)
+    + gg.theme(
+        strip_background=gg.element_rect(color="black", fill="#fdfff4"),
+        strip_text=gg.element_text(size=7),
+    )
+)
+
+output_file = pathlib.Path(f"{output_dir}/cell_health_grit_controltitration_zoom.png")
+grit_control_count_gg.save(output_file, dpi=500, height=7, width=4)
+
+grit_control_count_gg
