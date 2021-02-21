@@ -67,6 +67,11 @@ metadata <- get_annotation(profiles)
 
 
 ```{r}
+head(metadata)
+```
+
+
+```{r}
 sim_df <- sim_calculate(profiles)
 ```
 
