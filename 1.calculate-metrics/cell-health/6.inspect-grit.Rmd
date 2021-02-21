@@ -67,7 +67,7 @@ metadata <- get_annotation(profiles)
 
 
 ```{r}
-head(metadata)
+head(metadata, 5)
 ```
 
 
