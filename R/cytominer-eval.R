@@ -87,8 +87,9 @@ sim_calculate <-
 #' @param sim_df
 #' @param metadata
 #' @param grouping_cols
-#' @param drop_group_tag_col
 #' @param annotation_cols
+#' @param drop_group_tag_col
+#' @param drop_lower
 #'
 #' @return
 #' @export
@@ -99,7 +100,8 @@ sim_filter_groups <-
            metadata,
            grouping_cols,
            annotation_cols = NULL,
-           drop_group_tag_col = TRUE) {
+           drop_group_tag_col = TRUE,
+           drop_lower = FALSE) {
     metadata_i <-
       metadata %>%
       select(id, any_of(grouping_cols))
@@ -125,6 +127,10 @@ sim_filter_groups <-
     
     if (drop_group_tag_col) {
       sim_df %<>% select(-group)
+    }
+    
+    if (drop_lower) {
+      sim_df %<>% filter(id1 > id2)
     }
     
     sim_df

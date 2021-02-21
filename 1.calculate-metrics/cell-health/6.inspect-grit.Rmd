@@ -24,6 +24,8 @@ output:
 output: github_document
 ```
 
+# Boilerplate 
+
 ```{r echo=FALSE}
 show_table <- print
 ```
@@ -54,6 +56,8 @@ library(tidyverse)
 source("../../R/cytominer-eval.R")
 ```
 
+# Load data
+
 Load EMPTY-normalized data
 
 ```{r message=FALSE}
@@ -71,10 +75,15 @@ head(metadata, 5)
 ```
 
 
+# Calculate similarity
+
 ```{r}
 sim_df <- sim_calculate(profiles)
 ```
 
+# Replicate similarity
+
+## Calculate
 
 ```{r}
 grouping_cols <- c("Metadata_cell_line", "Metadata_gene_name", "Metadata_pert_name")
@@ -85,9 +94,35 @@ rep <-
   sim_filter_groups(sim_df,
                     metadata,
                     grouping_cols,
-                    annotation_cols)
+                    annotation_cols,
+                    drop_lower = TRUE)
 ```
 
+## Check
+
+```{r}
+n_profiles <- 
+  profiles %>%
+  group_by(across(any_of(annotation_cols))) %>%
+  tally(name = "n_profiles") %>%
+  arrange(desc(n_profiles))
+
+n_replicate_pairs <- 
+  rep %>%
+  group_by(across(any_of(annotation_cols))) %>%
+  tally(name = "n_replicate_pairs") %>%
+  arrange(desc(n_replicate_pairs))
+
+inner_join(n_profiles, n_replicate_pairs) %>%
+  mutate(check =
+           n_replicate_pairs == (n_profiles * (n_profiles - 1)) / 2) %>%
+  filter(!check)
+
+```
+
+# Reference similarity
+
+## Calculate
 
 ```{r}
 reference <- 
@@ -108,24 +143,28 @@ ref <-
   )
 ```
 
+## Check 
 
 ```{r}
-# profiles %>% 
-#   group_by(across(any_of(grouping_cols))) %>%
-#   tally() %>%
-#   View()
-# 
-# rep %>% 
-#   group_by(across(any_of(c("Metadata_cell_line", "Metadata_gene_name", "Metadata_pert_name")))) %>%
-#   tally() %>%
-#   View()
-# 
-# ref %>% 
-#   group_by(across(any_of(c("Metadata_cell_line", "Metadata_gene_name", "Metadata_pert_name")))) %>%
-#   tally() %>%
-#   View()
-```
+n_reference_pairs <- 
+  ref %>%
+  group_by(across(any_of(annotation_cols))) %>%
+  tally(name = "n_reference_pairs") %>%
+  arrange(desc(n_reference_pairs))
 
+n_references <-
+  metadata %>%
+  inner_join(reference) %>%
+  group_by(across(any_of(annotation_cols))) %>%
+  tally(name = "n_references")
+
+inner_join(n_profiles, n_reference_pairs) %>%
+  inner_join(n_references) %>%
+  mutate(check =
+           n_reference_pairs == (n_profiles * n_references)) %>%
+  filter(!check)
+```
+# Inspect
 
 ```{r}
 rep %>%
@@ -140,5 +179,62 @@ ref %>%
   ggplot(aes(sim)) + 
   geom_histogram(binwidth = .1) + 
   facet_wrap(~Metadata_cell_line)
+```
+```{r}
+rep %>% 
+  filter(Metadata_gene_name == "EMPTY") %>%
+  ggplot(aes(Metadata_cell_line, sim)) + 
+  geom_boxplot() +
+  ggtitle("Similarity of EMPTY to each other")
+
+rep %>% 
+  filter(Metadata_gene_name == "EMPTY") %>%
+  group_by(Metadata_cell_line) %>%
+  summarise(across(any_of("sim"), list(mean = mean, sd = sd)))
+```
+
+
+```{r}
+annotation_cols <- c("Metadata_cell_line", "Metadata_gene_name", "Metadata_pert_name")
+
+ref %>% 
+  group_by(across(any_of(annotation_cols))) %>%
+  summarise(across(any_of("sim"), list(mean = mean, sd = sd))) %>%
+  pivot_longer(-any_of(annotation_cols)) %>%
+  ggplot(aes(Metadata_cell_line, value)) + geom_boxplot() + 
+  facet_wrap(~name) +
+  ggtitle("Similarity of perturbations to EMPTY")
+
+```
+
+```{r}
+
+grouping_cols <- c("Metadata_cell_line", "Metadata_gene_name", "Metadata_pert_name")
+
+summary_sim_rep <-
+  rep %>% 
+  group_by(across(any_of(grouping_cols))) %>%
+  summarise(sim_rep = quantile(sim, .75), .groups = "keep")
+  
+summary_sim_rep_ref <- 
+  summary_sim_rep %>%
+  ungroup() %>%
+  inner_join(reference) %>%
+  select(Metadata_cell_line, sim_ref_rep = sim_rep)
+
+summary_sim_ref <-
+  ref %>% 
+  group_by(across(any_of(grouping_cols))) %>%
+  summarise(sim_ref = quantile(sim, .75), .groups = "keep")
+  
+summary_sim <-
+  inner_join(
+    summary_sim_ref,
+    summary_sim_rep
+  ) %>%
+  inner_join(summary_sim_rep_ref)
+```
+```{r}
+ggplot(summary_sim, aes(sim_ref, sim_rep)) + geom_point() + facet_wrap(~Metadata_cell_line)
 ```
 
