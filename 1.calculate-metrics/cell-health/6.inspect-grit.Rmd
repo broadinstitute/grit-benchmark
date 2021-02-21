@@ -1,0 +1,139 @@
+---
+title: "Inspect Grit"
+author: "Shantanu Singh"
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+    theme: lumen
+---
+
+```
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+    theme: lumen
+```
+
+```
+output: github_document
+```
+
+```{r echo=FALSE}
+show_table <- print
+```
+
+If running interactively in RStudio, 
+
+- change `output` in the header of this markdown to `html_notebook` and
+- change to `eval=TRUE` below
+
+When knitting for pushing to GitHub,
+
+- change `output` in the header of this markdown to `github_document` and
+- change to `eval=FALSE` below
+
+```{r eval=FALSE}
+show_table <- knitr::kable
+knitr::opts_chunk$set(fig.width = 6, fig.asp = 2/3)
+```
+
+
+```{r message=FALSE}
+library(magrittr)
+library(tidyverse)
+```
+
+
+```{r}
+source("../../R/cytominer-eval.R")
+```
+
+Load EMPTY-normalized data
+
+```{r message=FALSE}
+profiles <- read_csv("data/cell_health_merged_feature_select.csv.gz")
+```
+
+
+```{r}
+metadata <- get_annotation(profiles)
+```
+
+
+```{r}
+sim_df <- sim_calculate(profiles)
+```
+
+
+```{r}
+grouping_cols <- c("Metadata_cell_line", "Metadata_gene_name", "Metadata_pert_name")
+
+annotation_cols <- c("Metadata_cell_line", "Metadata_gene_name", "Metadata_pert_name")
+
+rep <-
+  sim_filter_groups(sim_df,
+                    metadata,
+                    grouping_cols,
+                    annotation_cols)
+```
+
+
+```{r}
+reference <- 
+  data.frame(Metadata_gene_name = "EMPTY")
+
+annotation_cols <- c("Metadata_cell_line", "Metadata_gene_name", "Metadata_pert_name")
+
+grouping_cols <- c("Metadata_cell_line")
+
+ref <-
+  sim_filter_reference_within_group(
+    sim_df,
+    metadata,
+    grouping_cols,
+    reference,
+    annotation_cols,
+    filter_out_reference = TRUE
+  )
+```
+
+
+```{r}
+# profiles %>% 
+#   group_by(across(any_of(grouping_cols))) %>%
+#   tally() %>%
+#   View()
+# 
+# rep %>% 
+#   group_by(across(any_of(c("Metadata_cell_line", "Metadata_gene_name", "Metadata_pert_name")))) %>%
+#   tally() %>%
+#   View()
+# 
+# ref %>% 
+#   group_by(across(any_of(c("Metadata_cell_line", "Metadata_gene_name", "Metadata_pert_name")))) %>%
+#   tally() %>%
+#   View()
+```
+
+
+```{r}
+rep %>%
+  filter(Metadata_gene_name != "EMPTY") %>%
+  ggplot(aes(sim)) + 
+  geom_histogram(binwidth = .1) + 
+  facet_wrap(~Metadata_cell_line)
+```
+
+```{r}
+ref %>%
+  ggplot(aes(sim)) + 
+  geom_histogram(binwidth = .1) + 
+  facet_wrap(~Metadata_cell_line)
+```
+
