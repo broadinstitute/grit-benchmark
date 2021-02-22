@@ -1,3 +1,5 @@
+sim_cols <- c("id1", "id2", "sim")
+
 #' Title
 #'
 #' @param population
@@ -35,6 +37,55 @@ drop_annotation <-
 
 # Alias
 get_matrix <- drop_annotation
+
+#' Title
+#'
+#' @param sim_df
+#' @param metadata
+#' @param annotation_cols
+#' @param index
+#'
+#' @return
+#' @export
+#'
+#' @examples
+sim_annotate <-
+  function(sim_df,
+           metadata,
+           annotation_cols,
+           index = "both") {
+    metadata_i <-
+      metadata %>%
+      select(id, any_of(annotation_cols))
+    
+    sim_df %<>% select(all_of(sim_cols))
+    
+    if (index == "left") {
+      sim_df %<>%
+        inner_join(metadata_i,
+                   by = c("id1" = "id"),
+                   suffix = c("1", "2"))
+    }
+    
+    if (index == "right") {
+      sim_df %<>%
+        inner_join(metadata_i,
+                   by = c("id2" = "id"),
+                   suffix = c("1", "2"))
+    }
+    
+    if (index == "both") {
+      sim_df %<>%
+        inner_join(metadata_i,
+                   by = c("id1" = "id")) %>%
+        inner_join(metadata_i,
+                   by = c("id2" = "id"),
+                   suffix = c("1", "2"))
+    }
+    
+    sim_df
+    
+  }
 
 #' Title
 #'
@@ -86,33 +137,43 @@ sim_calculate <-
 #'
 #' @param sim_df
 #' @param metadata
-#' @param grouping_cols
+#' @param all_same_cols
 #' @param annotation_cols
-#' @param drop_group_tag_col
+#' @param include_group_tag
 #' @param drop_lower
 #'
 #' @return
 #' @export
 #'
 #' @examples
-sim_filter_groups <-
+sim_all_same <-
   function(sim_df,
            metadata,
-           grouping_cols,
+           all_same_cols,
            annotation_cols = NULL,
-           drop_group_tag_col = TRUE,
+           include_group_tag = FALSE,
            drop_lower = FALSE) {
     metadata_i <-
       metadata %>%
-      select(id, any_of(grouping_cols))
+      select(id, all_of(all_same_cols)) %>%
+      unite("all_same_col", all_of(all_same_cols), sep = ":")
     
     ids <-
-      full_join(metadata_i,
-                metadata_i,
-                by = grouping_cols,
-                suffix = c("1", "2")) %>%
-      unite("group", any_of(grouping_cols), sep = ":") %>%
-      select(id1, id2, group)
+      inner_join(metadata_i,
+                 metadata_i,
+                 by = "all_same_col",
+                 suffix = c("1", "2"))
+    
+    if (include_group_tag) {
+      ids %<>% select(id1, id2, group = all_same_col)
+      
+    } else {
+      ids %<>% select(id1, id2)
+    }
+    
+    if (drop_lower) {
+      sim_df %<>% filter(id1 > id2)
+    }
     
     sim_df %<>%
       inner_join(ids, by = c("id1", "id2"))
@@ -122,107 +183,76 @@ sim_filter_groups <-
         sim_annotate(metadata,
                      annotation_cols,
                      index = "left")
-      
-    }
-    
-    if (drop_group_tag_col) {
-      sim_df %<>% select(-group)
-    }
-    
-    if (drop_lower) {
-      sim_df %<>% filter(id1 > id2)
     }
     
     sim_df
     
   }
 
-#' Title
-#'
-#' @param sim_df
-#' @param metadata
-#' @param group_left
-#' @param group_right
-#'
-#' @return
-#' @export
-#'
-#' @examples
-sim_filter_reference <-
-  function(sim_df,
-           metadata,
-           group_right = NULL,
-           group_left = NULL) {
-    if (!is.null(group_right)) {
-      reference_ids <-
-        metadata %>%
-        inner_join(group_right, by = colnames(group_right)) %>%
-        select(id2 = id)
-      
-      sim_df %<>%
-        inner_join(reference_ids, by = c("id2"))
-      
-    }
-    
-    if (!is.null(group_left)) {
-      reference_ids <-
-        metadata %>%
-        inner_join(group_left, by = colnames(group_left)) %>%
-        select(id1 = id)
-      
-      sim_df %<>%
-        inner_join(reference_ids, by = c("id1"))
-      
-    }
-    
-    sim_df
-  }
 
 #' Title
 #'
 #' @param sim_df
 #' @param metadata
-#' @param annotation_cols
-#' @param index
+#' @param filter_keep
+#' @param filter_side
 #'
 #' @return
 #' @export
 #'
 #' @examples
-sim_annotate <-
+sim_keep <-
   function(sim_df,
            metadata,
-           annotation_cols,
-           index = "both") {
-    metadata_i <-
+           filter_keep,
+           filter_side) {
+    stopifnot(filter_side %in% c("left", "right"))
+    
+    filter_ids <-
       metadata %>%
-      select(id, any_of(annotation_cols))
+      inner_join(filter_keep, by = colnames(filter_keep)) %>%
+      select(id)
     
-    if (index == "left") {
-      sim_df %<>%
-        inner_join(metadata_i,
-                   by = c("id1" = "id"),
-                   suffix = c("1", "2"))
-    }
+    join_str <- c("id")
     
-    if (index == "right") {
-      sim_df %<>%
-        inner_join(metadata_i,
-                   by = c("id2" = "id"),
-                   suffix = c("1", "2"))
-    }
+    # join_str will be either c("id1" = "id") or c("id2" = "id")
+    names(join_str) <- paste0("id", ifelse(filter_side == "left", 1, 2))
     
-    if (index == "both") {
-      sim_df %<>%
-        inner_join(metadata_i,
-                   by = c("id1" = "id")) %>%
-        inner_join(metadata_i,
-                   by = c("id2" = "id"),
-                   suffix = c("1", "2"))
-    }
+    sim_df %<>%
+      inner_join(filter_ids, by = join_str)
     
     sim_df
     
+  }
+
+
+#' Title
+#'
+#' @param sim_df
+#' @param metadata
+#' @param filter_drop
+#' @param filter_side
+#'
+#' @return
+#' @export
+#'
+#' @examples
+sim_drop <-
+  function(sim_df,
+           metadata,
+           filter_drop,
+           filter_side) {
+    stopifnot(filter_side %in% c("left", "right"))
+    
+    sim_df %<>%
+      select(all_of(sim_cols)) %>%
+      sim_annotate(metadata,
+                   colnames(filter_drop),
+                   index = filter_side) %>%
+      anti_join(filter_drop, by = colnames(filter_drop)) %>%
+      select(all_of(sim_cols))
+    
+    sim_df
   }
 
 
@@ -231,44 +261,176 @@ sim_annotate <-
 #'
 #' @param sim_df
 #' @param metadata
-#' @param grouping_cols
-#' @param reference
-#' @param filter_out_reference
-#' @param annotate_grouping_cols
+#' @param all_same_cols
+#' @param filter_keep_right
+#' @param annotation_cols
+#' @param drop_reference
 #'
 #' @return
 #' @export
 #'
 #' @examples
-sim_filter_reference_within_group <- function(sim_df,
-                                              metadata,
-                                              grouping_cols,
-                                              reference,
-                                              annotation_cols = NULL,
-                                              filter_out_reference = TRUE)
-{
-  sim_df %<>%
-    sim_filter_groups(metadata,
-                      grouping_cols) %>%
-    sim_filter_reference(metadata,
-                         reference)
-  
-  if (filter_out_reference) {
+sim_all_same_keep_some <-
+  function(sim_df,
+           metadata,
+           all_same_cols,
+           filter_keep_right,
+           annotation_cols = NULL,
+           drop_reference = TRUE)
+  {
     sim_df %<>%
-      sim_annotate(metadata,
-                   colnames(reference),
-                   index = "left") %>%
-      anti_join(reference, by = colnames(reference)) %>%
-      select(-all_of(colnames(reference)))
+      sim_all_same(metadata,
+                   all_same_cols) %>%
+      sim_keep(metadata,
+               filter_keep_right,
+               "right")
+    
+    if (drop_reference) {
+      filter_drop_left <- filter_keep_right
+      
+      sim_df %<>%
+        sim_drop(metadata,
+                 filter_drop_left,
+                 "left")
+    }
+    
+    if (!is.null(annotation_cols)) {
+      sim_df %<>%
+        select(all_of(sim_cols)) %>%
+        sim_annotate(metadata,
+                     annotation_cols,
+                     index = "left")
+      
+    }
+    
+    sim_df
   }
-  
-  if (!is.null(annotation_cols)) {
+
+#' Title
+#'
+#' @param sim_df 
+#' @param metadata 
+#' @param any_different_cols 
+#' @param all_same_cols 
+#' @param all_different_cols 
+#' @param filter_keep_left 
+#' @param filter_keep_right 
+#' @param annotation_cols 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+sim_some_different_keep_some <-
+  function(sim_df,
+           metadata,
+           any_different_cols,
+           all_same_cols = NULL,
+           all_different_cols = NULL,
+           filter_keep_left = NULL,
+           filter_keep_right = NULL,
+           annotation_cols = NULL) {
+    stopifnot(!any(all_same_cols %in% all_different_cols))
+    
+    metadata_i <- metadata
+    
+    if (is.null(all_same_cols)) {
+      # create a dummy column on which to join
+      metadata_i %<>% mutate(all_same_col = 0)
+      all_same_cols <- "all_same_col"
+    } else {
+      # create a unified column on which to join
+      metadata_i %<>%
+        unite("all_same_col",
+              all_of(all_same_cols),
+              sep = ":",
+              remove = FALSE)
+    }
+    
+    # ignore any_different_cols if superseded by all_different_cols
+    if (any(all_different_cols %in% any_different_cols)) {
+      any_different_cols <- NULL
+    }
+    
+    # remove from any_different_cols its intersection with all_same_cols
+    any_different_cols <- setdiff(any_different_cols, all_same_cols)
+    
+    # create a unified column for any_different_cols and include that new column
+    # in all_different_cols
+    if (!is.null(any_different_cols)) {
+      metadata_i %<>%
+        unite(
+          "any_different_col",
+          all_of(any_different_cols),
+          sep = ":",
+          remove = FALSE
+        )
+      
+      all_different_cols <-
+        c(all_different_cols, "any_different_col")
+      
+    }
+    
+    # create left and right metadata
+    f_metadata_filter <-
+      function(filter_df) {
+        if (is.null(filter_df)) {
+          metadata_i %>%
+            select(id, all_same_col)
+          
+        } else {
+          metadata_i %>%
+            anti_join(filter_df, by = colnames(filter_df)) %>%
+            select(id, all_same_col)
+          
+        }
+      }
+    
+    metadata_left  <- f_metadata_filter(filter_keep_left)
+    metadata_right <- f_metadata_filter(filter_keep_right)
+    
+    # list of rows that should be the same (weak constraint)
+    ids_all_same <-
+      inner_join(metadata_left,
+                 metadata_right,
+                 by = "all_same_col",
+                 suffix = c("1", "2"))
+    
+    # list of rows that should be the different (strong constraint)
+    ids_all_different <-
+      map_df(all_different_cols,
+             function(all_different_col) {
+               inner_join(
+                 metadata_i %>% select(id, all_of(all_different_col)),
+                 metadata_i %>% select(id, all_of(all_different_col)),
+                 by = all_different_col,
+                 suffix = c("1", "2")
+               ) %>%
+                 select(id1, id2)
+               
+             }) %>%
+      distinct()
+    
+    # impose strong constraint on weak constraint
+    ids <-
+      anti_join(ids_all_same,
+                ids_all_different,
+                by = c("id1", "id2"))
+    
+    ids %<>% select(id1, id2)
+    
+    # filter similarity matrix
     sim_df %<>%
-      sim_annotate(metadata,
-                   annotation_cols,
-                   index = "left")
+      inner_join(ids, by = c("id1", "id2"))
+    
+    # add annotations
+    if (!is.null(annotation_cols)) {
+      sim_df %<>%
+        sim_annotate(metadata,
+                     annotation_cols,
+                     index = "left")
+    }
+    
+    sim_df
     
   }
-  
-  sim_df
-}
