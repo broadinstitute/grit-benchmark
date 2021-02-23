@@ -368,6 +368,9 @@ metadata &lt;- get_annotation(profiles)</code></pre>
   sim_df %&gt;% arrow::write_parquet(&quot;data/sim.parquet&quot;)
 }</code></pre>
 <!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiTG9hZGluZyBleGlzdGluZyBzaW1pbGFyaXR5IGZpbGUuLi5cbiJ9 -->
+<pre><code>Loading existing similarity file...</code></pre>
+<!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
@@ -553,6 +556,13 @@ stopifnot(
   tally(name = &quot;n_pert&quot;) %&gt;%
   select(n_pert, n_rep)</code></pre>
 <!-- rnb-source-end -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibnJvdyI6NiwibmNvbCI6Miwic3VtbWFyeSI6eyJBIHRpYmJsZSI6WyI2IHggMiJdfX0sInJkZiI6Ikg0c0lBQUFBQUFBQUExMVFzVTdETUJDOXVrMUNMUldRT2pEd0RjblNCYllPRldKR0lIV3JUR29nSXJVanh4V01mQkxmeDlEdzdNUlY1RWd2dVh0Mzc5MWRuamJiRmQ5eUlwclNESmdtQ0NsNWVYN0k3NGhtRE1rRWhibjdmcU5waWNDUkN5QUZib0ZISUNmS0x0RHppL0o2VkdmZUdVN09GY2lBbThnNFVlSWdXd1RYWHRDVHFkbzEwdGh6eTg3SUp0TE5qZjRxZ3RZTlpEOTRkVjMzRnc4b2E5R0dBWUhrZTJGRjhXYWdSM2FLSkpsdWJLVVZSR3c1ckQ0V1QweEVYQjJWMjJTZmx4OUg5Wm5mdXdHKzNEK0xJVTVITWV0SHNtNndTc0xsVXIxWFNvYmRhL0VxNnlHNXhNWCs0S0l4bFFvL2g0TnRDNnV0Q0gyODFIVmcvRzEwK2dlb2dsZjg2UUVBQUE9PSJ9 -->
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["n_pert"],"name":[1],"type":["int"],"align":["right"]},{"label":["n_rep"],"name":[2],"type":["int"],"align":["right"]}],"data":[{"1":"27","2":"2"},{"1":"72","2":"3"},{"1":"45","2":"4"},{"1":"1800","2":"5"},{"1":"432","2":"7"},{"1":"576","2":"23"}],"options":{"columns":{"min":{},"max":[10],"total":[2]},"rows":{"min":[10],"max":[10],"total":[6]},"pages":{}}}
+  </script>
+</div>
+<!-- rnb-frame-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <p>Non-replicate counts (<code>n_pert</code> perturbations have <code>n_nonrep</code> non-replicate similarities)</p>
@@ -564,6 +574,13 @@ stopifnot(
   tally(name = &quot;n_pert&quot;) %&gt;%
   select(n_pert, n_nonrep)</code></pre>
 <!-- rnb-source-end -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibnJvdyI6NSwibmNvbCI6Miwic3VtbWFyeSI6eyJBIHRpYmJsZSI6WyI1IHggMiJdfX0sInJkZiI6Ikg0c0lBQUFBQUFBQUExMVF3VXJFTUJDZGRwdTZXMXhaMk85b1VieDQ5Q0IrZ0Nnc1hwWnNOMnF4VGtxYVJZOStpMThwQ0Z0ZjJnU1dCQ2J6NXMyOG1Vd2U3amJYeGFZZ29obGxzSmtBSlBIMGVGL2VFR1VwZ2dTSmhmTmZLRm9ET0hMcHFnQnY0WCtJOG5QNFp4LzdIUDFDZzlva2crV3dlZFJRc1B4UVBjQnFiRHFST1c4N1pheVA1cnhselVaMWtYUmg5R2NWNUc1ZStvMXJHSWEvZUViZHlqN01DR1N4bDFaV0x3WjZSTWRJY3FZNzIyaUdLRjM3VFU3RmlZbUkxWUhkUy9abC9YYmc5L0xxMGswWTg5TlplaXhPY0RyTlRBZmZTNFR0RmI4MnJNTGpXN2xUclE4dXNQSzRjZFdaaHNNSEZXRDd5bW9yUTExUjZ6WXc0M0owL0FmVWhXZ0s1UUVBQUE9PSJ9 -->
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["n_pert"],"name":[1],"type":["int"],"align":["right"]},{"label":["n_nonrep"],"name":[2],"type":["int"],"align":["right"]}],"data":[{"1":"576","2":"248"},{"1":"162","2":"258"},{"1":"1548","2":"260"},{"1":"90","2":"262"},{"1":"576","2":"264"}],"options":{"columns":{"min":{},"max":[10],"total":[2]},"rows":{"min":[10],"max":[10],"total":[5]},"pages":{}}}
+  </script>
+</div>
+<!-- rnb-frame-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <p>Reference counts (<code>n_pert</code> perturbations have <code>n_ref</code> reference similarities)</p>
@@ -575,6 +592,13 @@ stopifnot(
   tally(name = &quot;n_pert&quot;) %&gt;%
   select(n_pert, n_ref)</code></pre>
 <!-- rnb-source-end -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibnJvdyI6MiwibmNvbCI6Miwic3VtbWFyeSI6eyJBIHRpYmJsZSI6WyIyIHggMiJdfX0sInJkZiI6Ikg0c0lBQUFBQUFBQUExMVF3UW9DSVJSOFdSWXJGRUhmc1F2UnBWc2RJanBIUWJld3pXcHAwOFUxNnRpWHR6M2R0VWhCblRlK2NSelhpOTJFN1JnQXRLR0RzMDBSQXQxdWx2RVVvRU93YU9GQlpQY25ObzBRV0xKZjcyUU9FSzErTmN4d3pnTWhsZndtU2dSRDExU1RYYmt2aERiZmxyMFdwMEFYYWZWSXZOWVp2SENwcXVvZEdxUTVMNzJCSjltUkc1NmNOT3F4Q2lVOVZaaE1TUlFSRzRrRzRwWU9pT0ZkMnBjYzQvUnlsOWQ0UExZTzdyd2UvUWFUZjJ3OVNkWGNSWDEwSWMrWkZQN3hPVCtJdkNrR0dOa2xUZ3FkU2Y4N0ROa3lNY3B3MzhkU2xYdkdoWVAzQjArZ051cktBUUFBIn0= -->
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["n_pert"],"name":[1],"type":["int"],"align":["right"]},{"label":["n_ref"],"name":[2],"type":["int"],"align":["right"]}],"data":[{"1":"576","2":"63"},{"1":"2376","2":"64"}],"options":{"columns":{"min":{},"max":[10],"total":[2]},"rows":{"min":[10],"max":[10],"total":[2]},"pages":{}}}
+  </script>
+</div>
+<!-- rnb-frame-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
