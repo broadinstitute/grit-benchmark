@@ -101,18 +101,36 @@ annotation_cols <-
     "Metadata_pert_name")
 ```
 
+## Drop EMPTY wells
+
+```{r}
+drop_group <-
+  data.frame(Metadata_gene_name = "EMPTY")
+
+if (!is.null(drop_group)) {
+  sim_df %<>%
+    sim_drop(metadata, drop_group, "left") %>%
+    sim_drop(metadata, drop_group, "right")
+}
+```
+
 ## Similarity to reference
 
 Measure similarities of 
+
 a. all rows except those containing `reference`
+
 to 
+
 b. all rows containing `reference`
+
 Do so only for those (a, b) pairs that 
+
 - have *same* values in *all* columns of `all_same_cols_ref`
 
 ```{r}
 reference <-
-  data.frame(Metadata_gene_name = "EMPTY")
+  data.frame(Metadata_gene_name = c("Chr2", "Luc", "LacZ"))
 
 all_same_cols_ref <-
   c("Metadata_cell_line",
@@ -133,11 +151,15 @@ ref <-
 ## Similarity among replicates
 
 Measure similarities of 
+
 a. all rows except `reference` rows
+
 to
+
 b. all rows except `reference` rows (i.e. to each other)
 
 Do so for only those (a, b) pairs that 
+
 - have *same* values in *all* columns of `all_same_cols_rep
 
 Keep, both, (a, b) and (b, a)
@@ -162,11 +184,15 @@ rep <-
 ## Similarity among reference replicates
 
 Measure similarities of 
+
 a. all rows containing `reference`
+
 to
+
 b. all rows containing `reference` (i.e. to each other)
 
 Do so for only those (a, b) pairs that 
+
 - have *same* values in *all* columns of `all_same_cols_rep_ref`. 
 
 Keep, both, (a, b) and (b, a)
@@ -198,13 +224,19 @@ rep_ref <-
 ## Similarity among non-replicates
 
 Measure similarities of 
+
 a. all rows except `reference` rows
+
 to
+
 b. all rows except `reference` rows (i.e. to each other)
 
 Do so for only those (a, b) pairs that 
+
 - have *same* values in *all* columns of `all_same_cols_non_rep`
+
 - have *different* values in *all* columns `all_different_cols_non_rep`
+
 - have *different* values in *at least one* column of `any_different_cols_non_rep`
 
 Keep, both, (a, b) and (b, a)
