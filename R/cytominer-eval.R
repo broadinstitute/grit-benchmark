@@ -602,33 +602,34 @@ sim_munge <-
 sim_metrics <- function(grouped_sim,
                         sim_type,
                         annotation_prefix = "Metadata_") {
+  
+  group_cols <- 
+    str_subset(colnames(grouped_sim), pattern = annotation_prefix)
+  
+  # compute mean and s.d.
   sim_stats <-
     grouped_sim %>%
     filter(type == sim_type) %>%
-    group_by(across(all_of(c(
-      "id1",
-      str_subset(colnames(grouped_sim), pattern = annotation_prefix)
-    )))) %>%
+    group_by(across(all_of(c("id1", group_cols)))) %>%
     summarise(across(all_of("sim"), list(mean = mean, sd = sd)),
               .groups = "keep") %>%
     ungroup() %>%
     select(id1, sim_mean, sim_sd)
   
+  # scale using mean and s.d.
   sim_norm <-
     grouped_sim %>%
     filter(type == "rep") %>%
     inner_join(sim_stats, by = c("id1")) %>%
     mutate(sim_scaled = (sim - sim_mean) / sim_sd)
   
-  sim_norm_aggregated <-
+  # get a summary per row
+  sim_norm_agg <-
     sim_norm %>%
-    group_by(across(all_of(c(
-      "id1", all_same_cols_rep
-    )))) %>%
-    summarise(across(all_of(c(
-      "sim_scaled", "sim"
-    )), list(mean_agg = mean)),
-    .groups = "keep") %>%
+    group_by(across(all_of(c("id1", group_cols)))) %>%
+    summarise(across(all_of(c("sim_scaled", "sim")),
+                     list(mean_agg = mean)),
+              .groups = "keep") %>%
     rename_with(~ paste(., sim_type, sep = "_"),
                 starts_with("sim_scaled")) %>%
     ungroup() %>%
@@ -636,4 +637,18 @@ sim_metrics <- function(grouped_sim,
                  rename_with(~ paste(., sim_type, sep = "_"),
                              starts_with("sim")),
                by = "id1")
+  
+  # get a summary per group 
+  sim_norm_agg_agg <-
+    sim_norm_agg %>%
+    ungroup() %>%
+    group_by(across(all_of(c(all_same_cols_rep)))) %>%
+    summarise(across(-all_of("id1"),
+                     list(
+                       mean_agg = mean, median_agg = median
+                     )),
+              .groups = "keep")
+  
+  list(per_row = sim_norm_agg,
+       per_group = sim_norm_agg_agg)
 }
