@@ -483,7 +483,7 @@ sim_munge <-
     # Measure similarities of 
     # a. all rows except those containing `reference`
     # to 
-    # a. all rows containing `reference`
+    # b. all rows containing `reference`
     # Do so only for those (a, b) pairs that 
     # - have *same* values in *all* columns of `all_same_cols_ref`
     
@@ -558,8 +558,8 @@ sim_munge <-
     # Keep, both, (a, b) and (b, a)
     
     nonrep <-
+      sim_df %>%
       sim_some_different_drop_some(
-        sim_df,
         metadata,
         any_different_cols = any_different_cols_non_rep,
         all_same_cols = all_same_cols_non_rep,
