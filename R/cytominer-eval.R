@@ -321,14 +321,14 @@ sim_all_same_keep_some <-
 #' @export
 #'
 #' @examples
-sim_some_different_keep_some <-
+sim_some_different_drop_some <-
   function(sim_df,
            metadata,
            any_different_cols,
            all_same_cols = NULL,
            all_different_cols = NULL,
-           filter_keep_left = NULL,
-           filter_keep_right = NULL,
+           filter_drop_left = NULL,
+           filter_drop_right = NULL,
            annotation_cols = NULL) {
     stopifnot(!any(all_same_cols %in% all_different_cols))
     
@@ -373,21 +373,21 @@ sim_some_different_keep_some <-
     
     # create left and right metadata
     f_metadata_filter <-
-      function(filter_df) {
-        if (is.null(filter_df)) {
+      function(filter_drop) {
+        if (is.null(filter_drop)) {
           metadata_i %>%
             select(id, all_same_col)
           
         } else {
           metadata_i %>%
-            anti_join(filter_df, by = colnames(filter_df)) %>%
+            anti_join(filter_drop, by = colnames(filter_drop)) %>%
             select(id, all_same_col)
           
         }
       }
     
-    metadata_left  <- f_metadata_filter(filter_keep_left)
-    metadata_right <- f_metadata_filter(filter_keep_right)
+    metadata_left  <- f_metadata_filter(filter_drop_left)
+    metadata_right <- f_metadata_filter(filter_drop_right)
     
     # list of rows that should be the same (weak constraint)
     ids_all_same <-
