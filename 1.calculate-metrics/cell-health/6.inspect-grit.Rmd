@@ -58,6 +58,7 @@ library(arrow)
 source("../../R/cytominer-eval.R")
 ```
 
+
 # Load data
 
 Load EMPTY-normalized data
@@ -75,6 +76,7 @@ metadata <- get_annotation(profiles)
 ```{r}
 head(metadata, 5)
 ```
+
 
 
 # Calculate similarity
@@ -111,7 +113,7 @@ rep <-
                metadata,
                all_same_cols_rep,
                annotation_cols,
-               drop_lower = TRUE)
+               drop_lower = FALSE)
 
 all_same_cols_rep_ref <-
   c("Metadata_cell_line",
@@ -119,7 +121,23 @@ all_same_cols_rep_ref <-
     "Metadata_pert_name",
     "Metadata_Plate")
 
+filter_keep <-
+  data.frame(Metadata_gene_name = "EMPTY")
+
+rep_ref <-
+  sim_df %>%
+  sim_keep(metadata,
+           filter_keep,
+           "left") %>%
+  sim_keep(metadata,
+           filter_keep,
+           "right") %>%
+  sim_all_same(metadata,
+               all_same_cols_rep_ref,
+               annotation_cols = all_same_cols_rep_ref,
+               drop_lower = FALSE)
 ```
+
 
 ## Check
 
@@ -138,17 +156,18 @@ n_replicate_pairs <-
 
 inner_join(n_profiles, n_replicate_pairs, by = all_same_cols_rep) %>%
   mutate(check =
-           n_replicate_pairs == (n_profiles * (n_profiles - 1)) / 2) %>%
+           n_replicate_pairs == n_profiles * (n_profiles - 1)) %>%
   filter(!check)
 
 ```
+
 
 # Reference similarity
 
 ## Calculate
 
 ```{r}
-filter_keep_right <-
+filter_keep <-
   data.frame(Metadata_gene_name = "EMPTY")
 
 annotation_cols <-
@@ -167,9 +186,10 @@ ref <-
   sim_all_same_keep_some(sim_df,
                          metadata,
                          all_same_cols_ref,
-                         filter_keep_right,
+                         filter_keep_right = filter_keep,
                          annotation_cols)
 ```
+
 
 ## Check 
 
@@ -193,7 +213,7 @@ n_profiles <-
 # number of references
 n_references <-
   metadata %>%
-  inner_join(filter_keep_right, by = colnames(filter_keep_right)) %>%
+  inner_join(filter_keep, by = colnames(filter_keep)) %>%
   group_by(across(all_of(all_same_cols_ref))) %>%
   tally(name = "n_references")
 
@@ -216,6 +236,7 @@ check_df %>%
            n_reference_pairs == (n_profiles * n_references)) %>%
   filter(!check)
 ```
+
 
 
 # Non-replicate similarity
