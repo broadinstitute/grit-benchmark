@@ -518,7 +518,7 @@ sim_munge <-
                    annotation_cols,
                    drop_lower = FALSE)
     
-    # ---- 2. Similarity to replicates (only references) ----
+    # ---- 3. Similarity to replicates (only references) ----
     
     # Fetch similarities between
     # a. all rows containing `reference`
