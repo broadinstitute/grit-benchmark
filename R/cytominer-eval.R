@@ -216,7 +216,8 @@ sim_keep <-
     join_str <- c("id")
     
     # join_str will be either c("id1" = "id") or c("id2" = "id")
-    names(join_str) <- paste0("id", ifelse(filter_side == "left", 1, 2))
+    names(join_str) <-
+      paste0("id", ifelse(filter_side == "left", 1, 2))
     
     sim_df %<>%
       inner_join(filter_ids, by = join_str)
@@ -308,14 +309,14 @@ sim_all_same_keep_some <-
 
 #' Title
 #'
-#' @param sim_df 
-#' @param metadata 
-#' @param any_different_cols 
-#' @param all_same_cols 
-#' @param all_different_cols 
-#' @param filter_keep_left 
-#' @param filter_keep_right 
-#' @param annotation_cols 
+#' @param sim_df
+#' @param metadata
+#' @param any_different_cols
+#' @param all_same_cols
+#' @param all_different_cols
+#' @param filter_keep_left
+#' @param filter_keep_right
+#' @param annotation_cols
 #'
 #' @return
 #' @export
@@ -439,17 +440,17 @@ sim_some_different_drop_some <-
 
 #' Title
 #'
-#' @param sim_df 
-#' @param metadata 
-#' @param reference 
-#' @param all_same_cols_rep 
-#' @param all_same_cols_rep_ref 
-#' @param all_same_cols_ref 
-#' @param any_different_cols_non_rep 
-#' @param all_same_cols_non_rep 
-#' @param all_different_cols_non_rep 
-#' @param annotation_cols 
-#' @param drop_group 
+#' @param sim_df
+#' @param metadata
+#' @param reference
+#' @param all_same_cols_rep
+#' @param all_same_cols_rep_ref
+#' @param all_same_cols_ref
+#' @param any_different_cols_non_rep
+#' @param all_same_cols_non_rep
+#' @param all_different_cols_non_rep
+#' @param annotation_cols
+#' @param drop_group
 #'
 #' @return
 #' @export
@@ -466,9 +467,8 @@ sim_munge <-
            all_same_cols_non_rep,
            all_different_cols_non_rep,
            annotation_cols,
-           drop_group = NULL 
-  ) {
-    
+           drop_reference = FALSE,
+           drop_group = NULL) {
     # ---- 0. Filter out some rows ----
     
     if (!is.null(drop_group)) {
@@ -477,34 +477,36 @@ sim_munge <-
         sim_drop(metadata, drop_group, "right")
       
     }
-
-    # ---- 1. Similarity to reference ---- 
-
-    # Measure similarities of 
-    # a. all rows except those containing `reference`
-    # to 
+    
+    # ---- 1. Similarity to reference ----
+    
+    # Fetch similarities between
+    # a. all rows (except, optionally those containing `reference`)
+    # and
     # b. all rows containing `reference`
-    # Do so only for those (a, b) pairs that 
+    # Do so only for those (a, b) pairs that
     # - have *same* values in *all* columns of `all_same_cols_ref`
     
     ref <-
       sim_df %>%
-      sim_all_same_keep_some(metadata,
-                             all_same_cols_ref,
-                             filter_keep_right = reference,
-                             drop_reference = TRUE,
-                             annotation_cols)
-
-    # ---- 2. Similarity among replicates ----
-
-    # Measure similarities of 
+      sim_all_same_keep_some(
+        metadata,
+        all_same_cols_ref,
+        filter_keep_right = reference,
+        drop_reference = drop_reference,
+        annotation_cols
+      )
+    
+    # ---- 2. Similarity to replicates (no references) ----
+    
+    # Fetch similarities between
     # a. all rows except `reference` rows
-    # to
+    # and
     # b. all rows except `reference` rows (i.e. to each other)
-    # 
-    # Do so for only those (a, b) pairs that 
+    #
+    # Do so for only those (a, b) pairs that
     # - have *same* values in *all* columns of `all_same_cols_rep
-    # 
+    #
     # Keep, both, (a, b) and (b, a)
     
     rep <-
@@ -516,16 +518,16 @@ sim_munge <-
                    annotation_cols,
                    drop_lower = FALSE)
     
-    # ---- 3. Similarity among reference replicates ----
+    # ---- 2. Similarity to replicates (only references) ----
     
-    # Measure similarities of 
+    # Fetch similarities between
     # a. all rows containing `reference`
     # to
     # b. all rows containing `reference` (i.e. to each other)
-    # 
-    # Do so for only those (a, b) pairs that 
-    # - have *same* values in *all* columns of `all_same_cols_rep_ref`. 
-    # 
+    #
+    # Do so for only those (a, b) pairs that
+    # - have *same* values in *all* columns of `all_same_cols_rep_ref`.
+    #
     # Keep, both, (a, b) and (b, a)
     
     rep_ref <-
@@ -542,20 +544,26 @@ sim_munge <-
         annotation_cols = annotation_cols,
         drop_lower = FALSE
       )
-
-    # ---- 4. Similarity among non-replicates ----
     
-    # Measure similarities of 
-    # a. all rows except `reference` rows
+    # ---- 4. Similarity to non-replicates ----
+    
+    # Fetch similarities between
+    # a. all rows (except, optionally, `reference` rows)
     # to
-    # b. all rows except `reference` rows (i.e. to each other)
-    # 
-    # Do so for only those (a, b) pairs that 
+    # b. all rows except `reference` rows
+    #
+    # Do so for only those (a, b) pairs that
     # - have *same* values in *all* columns of `all_same_cols_non_rep`
     # - have *different* values in *all* columns `all_different_cols_non_rep`
     # - have *different* values in *at least one* column of `any_different_cols_non_rep`
-    # 
+    #
     # Keep, both, (a, b) and (b, a)
+
+    if (drop_reference) {
+      reference_left <- reference
+    } else {
+      reference_left <- NULL
+    }
     
     nonrep <-
       sim_df %>%
@@ -564,7 +572,7 @@ sim_munge <-
         any_different_cols = any_different_cols_non_rep,
         all_same_cols = all_same_cols_non_rep,
         all_different_cols = all_different_cols_non_rep,
-        filter_drop_left = reference,
+        filter_drop_left = reference_left,
         filter_drop_right = reference,
         annotation_cols = annotation_cols
       )
@@ -579,3 +587,53 @@ sim_munge <-
     
     combined
   }
+
+
+#' Title
+#'
+#' @param grouped_sim 
+#' @param sim_type 
+#' @param annotation_prefix 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+sim_metrics <- function(grouped_sim,
+                        sim_type,
+                        annotation_prefix = "Metadata_") {
+  sim_stats <-
+    grouped_sim %>%
+    filter(type == sim_type) %>%
+    group_by(across(all_of(c(
+      "id1",
+      str_subset(colnames(grouped_sim), pattern = annotation_prefix)
+    )))) %>%
+    summarise(across(all_of("sim"), list(mean = mean, sd = sd)),
+              .groups = "keep") %>%
+    ungroup() %>%
+    select(id1, sim_mean, sim_sd)
+  
+  sim_norm <-
+    grouped_sim %>%
+    filter(type == "rep") %>%
+    inner_join(sim_stats, by = c("id1")) %>%
+    mutate(sim_scaled = (sim - sim_mean) / sim_sd)
+  
+  sim_norm_aggregated <-
+    sim_norm %>%
+    group_by(across(all_of(c(
+      "id1", all_same_cols_rep
+    )))) %>%
+    summarise(across(all_of(c(
+      "sim_scaled", "sim"
+    )), list(mean_agg = mean)),
+    .groups = "keep") %>%
+    rename_with(~ paste(., sim_type, sep = "_"),
+                starts_with("sim_scaled")) %>%
+    ungroup() %>%
+    inner_join(sim_stats %>%
+                 rename_with(~ paste(., sim_type, sep = "_"),
+                             starts_with("sim")),
+               by = "id1")
+}
