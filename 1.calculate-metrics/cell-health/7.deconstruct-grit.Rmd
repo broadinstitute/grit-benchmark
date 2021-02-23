@@ -1,0 +1,316 @@
+---
+title: "Deconstruct Grit"
+author: "Shantanu Singh"
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+    theme: lumen
+---
+
+```
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+    theme: lumen
+```
+
+```
+output: github_document
+```
+
+# Boilerplate 
+
+```{r echo=FALSE}
+show_table <- print
+```
+
+If running interactively in RStudio, 
+
+- change `output` in the header of this markdown to `html_notebook` and
+- change to `eval=TRUE` below
+
+When knitting for pushing to GitHub,
+
+- change `output` in the header of this markdown to `github_document` and
+- change to `eval=FALSE` below
+
+```{r eval=FALSE}
+show_table <- knitr::kable
+knitr::opts_chunk$set(fig.width = 6, fig.asp = 2/3)
+```
+
+# Libraries
+
+```{r message=FALSE}
+library(magrittr)
+library(tidyverse)
+library(arrow)
+```
+
+
+```{r}
+source("../../R/cytominer-eval.R")
+```
+
+# Load data
+
+```{r message=FALSE}
+profiles <- read_csv("data/cell_health_merged_feature_select.csv.gz")
+
+metadata <- get_annotation(profiles)
+```
+
+
+```{r}
+if (file.exists("data/sim.parquet")) {
+  message("Loading existing similarity file...")
+  sim_df <- arrow::read_parquet("data/sim.parquet")
+    
+} else {
+  sim_df <- sim_calculate(profiles)
+  sim_df %>% arrow::write_parquet("data/sim.parquet")
+  
+}
+```
+
+## Compute similarity sets
+
+```{r}
+
+# ---- 0. Filter out some rows ----
+
+drop_group <-
+  data.frame(Metadata_gene_name = "EMPTY")
+
+# ---- 1. Similarity to reference ---- 
+
+# Measure similarities of 
+# a. all rows except those containing `reference`
+# to 
+# a. all rows containing `reference`
+# Do so only for those (a, b) pairs that 
+# - have *same* values in *all* columns of `all_same_cols_ref`
+    
+reference <-
+  data.frame(Metadata_gene_name = c("Chr2", "Luc", "LacZ"))
+
+all_same_cols_rep_ref <-
+  c(
+    "Metadata_cell_line",
+    "Metadata_gene_name",
+    "Metadata_pert_name",
+    "Metadata_Plate"
+  )
+
+# ---- 2. Similarity among replicates ----
+
+# Measure similarities of 
+# a. all rows except `reference` rows
+# to
+# b. all rows except `reference` rows (i.e. to each other)
+# 
+# Do so for only those (a, b) pairs that 
+# - have *same* values in *all* columns of `all_same_cols_rep
+# 
+# Keep, both, (a, b) and (b, a)
+
+all_same_cols_rep <-
+  c("Metadata_cell_line",
+    "Metadata_gene_name",
+    "Metadata_pert_name")
+
+
+# ---- 3. Similarity among reference replicates ----
+
+# Measure similarities of 
+# a. all rows containing `reference`
+# to
+# b. all rows containing `reference` (i.e. to each other)
+# 
+# Do so for only those (a, b) pairs that 
+# - have *same* values in *all* columns of `all_same_cols_rep_ref`. 
+# 
+# Keep, both, (a, b) and (b, a)
+
+all_same_cols_ref <-
+  c("Metadata_cell_line",
+    "Metadata_Plate")
+
+# ---- 4. Similarity among non-replicates ----
+
+# Measure similarities of 
+# a. all rows except `reference` rows
+# to
+# b. all rows except `reference` rows (i.e. to each other)
+# 
+# Do so for only those (a, b) pairs that 
+# - have *same* values in *all* columns of `all_same_cols_non_rep`
+# - have *different* values in *all* columns `all_different_cols_non_rep`
+# - have *different* values in *at least one* column of `any_different_cols_non_rep`
+# 
+# Keep, both, (a, b) and (b, a)
+
+any_different_cols_non_rep <-
+  c("Metadata_cell_line",
+    "Metadata_gene_name",
+    "Metadata_pert_name")
+
+all_same_cols_non_rep <-
+  c("Metadata_cell_line", 
+    "Metadata_Plate")
+
+all_different_cols_non_rep <-
+  c("Metadata_gene_name")
+
+# ---- 5. Combine 1-4 and annotate the similarity matrix ----
+
+annotation_cols <-
+  c("Metadata_cell_line",
+    "Metadata_gene_name",
+    "Metadata_pert_name")
+
+all_sim <-
+  sim_munge(
+    sim_df,
+    metadata,
+    reference,
+    all_same_cols_rep = all_same_cols_rep,
+    all_same_cols_rep_ref = all_same_cols_rep_ref,
+    all_same_cols_ref = all_same_cols_ref,
+    any_different_cols_non_rep = any_different_cols_non_rep,
+    all_same_cols_non_rep = all_same_cols_non_rep,
+    all_different_cols_non_rep = all_different_cols_non_rep,
+    annotation_cols = annotation_cols,
+    drop_group = drop_group
+  )
+
+```
+
+
+```{r}
+# check for duplicates 
+stopifnot(
+  all_sim %>%
+    unite("id12", all_of(c("id1", "id2")), sep = ":") %>%
+    pull("id12") %>%
+    duplicated() %>%
+    any() %>%
+    not()
+)
+
+all_sim_counts <-
+  all_sim %>%
+  group_by(across(all_of(c("id1", all_same_cols_rep, "type")))) %>%
+  tally() %>%
+  arrange(across(all_of(all_same_cols_rep))) %>%
+  pivot_wider(names_from = "type",
+              values_from = n,
+              values_fill = 0)
+
+all_sim_counts %>%
+  group_by(nonrep) %>%
+  tally(name = "n_perts")
+
+all_sim_counts %>%
+  group_by(rep) %>%
+  tally(name = "n_perts")
+
+all_sim_counts %>%
+  group_by(ref) %>%
+  tally(name = "n_perts")
+```
+
+
+```{r}
+ref_stats <- 
+  all_sim %>%
+  filter(type == "ref") %>%
+  group_by(across(all_of(c("id1", all_same_cols_rep)))) %>%
+  summarise(across(all_of("sim"), list(mean = mean, sd = sd)), .groups = "keep") %>%
+  ungroup() %>%
+  select(id1, sim_mean, sim_sd)
+
+norm_ref <-
+  all_sim %>%
+  filter(type == "rep") %>%
+  inner_join(ref_stats, by = c("id1")) %>%
+  mutate(sim_norm_ref = (sim - sim_mean) / sim_sd)
+  
+norm_ref_counts <- 
+  norm_ref %>%
+  group_by(across(all_of(c("id1", all_same_cols_rep)))) %>%
+  arrange(across(all_of(all_same_cols_rep))) %>%
+  tally()
+
+norm_ref_aggregated <-
+  norm_ref %>%
+  group_by(across(all_of(c("id1", all_same_cols_rep)))) %>%
+  summarise(across(all_of(c("sim_norm_ref", "sim")), list(median = median)), .groups = "keep")
+```
+
+
+```{r}
+nonrep_stats <- 
+  all_sim %>%
+  filter(type == "nonrep") %>%
+  group_by(across(all_of(c("id1", all_same_cols_rep)))) %>%
+  summarise(across(all_of("sim"), list(mean = mean, sd = sd)), .groups = "keep") %>%
+  ungroup() %>%
+  select(id1, sim_mean, sim_sd)
+
+norm_nonrep <-
+  all_sim %>%
+  filter(type == "rep") %>%
+  inner_join(nonrep_stats, by = c("id1")) %>%
+  mutate(sim_norm_nonrep = (sim - sim_mean) / sim_sd)
+  
+norm_nonrep_counts <- 
+  norm_nonrep %>%
+  group_by(across(all_of(c("id1", all_same_cols_rep)))) %>%
+  arrange(across(all_of(all_same_cols_rep))) %>%
+  tally()
+
+norm_nonrep_aggregated <-
+  norm_nonrep %>%
+  group_by(across(all_of(c("id1", all_same_cols_rep)))) %>%
+  summarise(across(all_of(c("sim_norm_nonrep", "sim")), list(median = median)), .groups = "keep")
+```
+
+
+```{r}
+norm_nonrep_ref_aggregated <-
+  inner_join(
+    norm_nonrep_aggregated,
+    norm_ref_aggregated
+  )
+```
+
+```{r}
+ggplot(norm_nonrep_ref_aggregated, 
+       aes(sim_norm_ref_median, sim_median)) + 
+  geom_point() + 
+  geom_smooth(method = "lm",
+              formula = "y ~ x")
+```
+
+
+```{r}
+ggplot(norm_nonrep_ref_aggregated, 
+       aes(sim_norm_nonrep_median, sim_median)) + 
+  geom_point() + 
+  geom_smooth(method = "lm",
+              formula = "y ~ x")
+```
+```{r}
+ggplot(norm_nonrep_ref_aggregated, 
+       aes(sim_norm_nonrep_median, sim_norm_ref_median)) + 
+  geom_point() + 
+  geom_smooth(method = "lm",
+              formula = "y ~ x")
+```
