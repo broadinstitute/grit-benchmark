@@ -434,3 +434,148 @@ sim_some_different_drop_some <-
     sim_df
     
   }
+
+
+
+#' Title
+#'
+#' @param sim_df 
+#' @param metadata 
+#' @param reference 
+#' @param all_same_cols_rep 
+#' @param all_same_cols_rep_ref 
+#' @param all_same_cols_ref 
+#' @param any_different_cols_non_rep 
+#' @param all_same_cols_non_rep 
+#' @param all_different_cols_non_rep 
+#' @param annotation_cols 
+#' @param drop_group 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+sim_munge <-
+  function(sim_df,
+           metadata,
+           reference,
+           all_same_cols_rep,
+           all_same_cols_rep_ref,
+           all_same_cols_ref,
+           any_different_cols_non_rep,
+           all_same_cols_non_rep,
+           all_different_cols_non_rep,
+           annotation_cols,
+           drop_group = NULL 
+  ) {
+    
+    # ---- 0. Filter out some rows ----
+    
+    if (!is.null(drop_group)) {
+      sim_df %<>%
+        sim_drop(metadata, drop_group, "left") %>%
+        sim_drop(metadata, drop_group, "right")
+      
+    }
+
+    # ---- 1. Similarity to reference ---- 
+
+    # Measure similarities of 
+    # a. all rows except those containing `reference`
+    # to 
+    # a. all rows containing `reference`
+    # Do so only for those (a, b) pairs that 
+    # - have *same* values in *all* columns of `all_same_cols_ref`
+    
+    ref <-
+      sim_df %>%
+      sim_all_same_keep_some(metadata,
+                             all_same_cols_ref,
+                             filter_keep_right = reference,
+                             drop_reference = TRUE,
+                             annotation_cols)
+
+    # ---- 2. Similarity among replicates ----
+
+    # Measure similarities of 
+    # a. all rows except `reference` rows
+    # to
+    # b. all rows except `reference` rows (i.e. to each other)
+    # 
+    # Do so for only those (a, b) pairs that 
+    # - have *same* values in *all* columns of `all_same_cols_rep
+    # 
+    # Keep, both, (a, b) and (b, a)
+    
+    rep <-
+      sim_df %>%
+      sim_drop(metadata, reference, "left") %>%
+      sim_drop(metadata, reference, "right") %>%
+      sim_all_same(metadata,
+                   all_same_cols_rep,
+                   annotation_cols,
+                   drop_lower = FALSE)
+    
+    # ---- 3. Similarity among reference replicates ----
+    
+    # Measure similarities of 
+    # a. all rows containing `reference`
+    # to
+    # b. all rows containing `reference` (i.e. to each other)
+    # 
+    # Do so for only those (a, b) pairs that 
+    # - have *same* values in *all* columns of `all_same_cols_rep_ref`. 
+    # 
+    # Keep, both, (a, b) and (b, a)
+    
+    rep_ref <-
+      sim_df %>%
+      sim_keep(metadata,
+               filter_keep = reference,
+               "left") %>%
+      sim_keep(metadata,
+               filter_keep = reference,
+               "right") %>%
+      sim_all_same(
+        metadata,
+        all_same_cols = all_same_cols_rep_ref,
+        annotation_cols = annotation_cols,
+        drop_lower = FALSE
+      )
+
+    # ---- 4. Similarity among non-replicates ----
+    
+    # Measure similarities of 
+    # a. all rows except `reference` rows
+    # to
+    # b. all rows except `reference` rows (i.e. to each other)
+    # 
+    # Do so for only those (a, b) pairs that 
+    # - have *same* values in *all* columns of `all_same_cols_non_rep`
+    # - have *different* values in *all* columns `all_different_cols_non_rep`
+    # - have *different* values in *at least one* column of `any_different_cols_non_rep`
+    # 
+    # Keep, both, (a, b) and (b, a)
+    
+    nonrep <-
+      sim_some_different_drop_some(
+        sim_df,
+        metadata,
+        any_different_cols = any_different_cols_non_rep,
+        all_same_cols = all_same_cols_non_rep,
+        all_different_cols = all_different_cols_non_rep,
+        filter_drop_left = reference,
+        filter_drop_right = reference,
+        annotation_cols = annotation_cols
+      )
+    
+    combined <-
+      bind_rows(
+        rep %>% mutate(type = "rep"),
+        rep_ref %>% mutate(type = "rep"),
+        nonrep %>% mutate(type = "nonrep"),
+        ref %>% mutate(type = "ref")
+      )
+    
+    combined
+  }
