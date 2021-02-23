@@ -275,26 +275,25 @@ all_sim_counts %>%
 # Inspect 
 
 ```{r}
-norm_nonrep_agg <- sim_metrics(grouped_sim, "nonrep")
+norm_nonrep_metrics <- 
+  sim_metrics(grouped_sim, "nonrep")
 
-norm_ref_agg <- sim_metrics(grouped_sim, "ref")
+norm_ref_metrics <- 
+  sim_metrics(grouped_sim, "ref")
 
-norm_agg <-
+per_row_metrics <-
   inner_join(
-    norm_nonrep_agg,
-    norm_ref_agg,
+    norm_nonrep_metrics[["per_row"]],
+    norm_ref_metrics[["per_row"]],
     by = c("id1", all_same_cols_rep, "sim_mean_agg")
   )
 
-norm_agg_agg <-
-  norm_agg %>%
-  ungroup() %>%
-  group_by(across(all_of(c(all_same_cols_rep)))) %>%
-  summarise(across(-all_of("id1"),
-                   list(
-                     mean_agg = mean, median_agg = median
-                   )),
-            .groups = "keep")
+per_group_metrics <-
+  inner_join(
+    norm_nonrep_metrics[["per_group"]],
+    norm_ref_metrics[["per_group"]],
+    by = c(all_same_cols_rep, "sim_mean_agg_mean_agg", "sim_mean_agg_median_agg")
+  )
 ```
 
   
@@ -310,19 +309,19 @@ plot_scatter <- function(df, x0, y0) {
 
 ```{r}
 plot_scatter(
-  norm_agg, 
+  per_row_metrics, 
   "sim_scaled_mean_agg_nonrep", 
   "sim_mean_agg") + 
   ggtitle("Replicate level, wrt nonreps")
 
 plot_scatter(
-  norm_agg_agg, 
+  per_group_metrics, 
   "sim_scaled_mean_agg_nonrep_mean_agg", 
   "sim_mean_agg_mean_agg") + 
   ggtitle("Perturbation level, wrt nonreps (mean)")
 
 plot_scatter(
-  norm_agg_agg, 
+  per_group_metrics, 
   "sim_scaled_mean_agg_nonrep_median_agg", 
   "sim_mean_agg_median_agg") + 
   ggtitle("Perturbation level, wrt nonreps (median)")
@@ -331,19 +330,19 @@ plot_scatter(
 
 ```{r}
 plot_scatter(
-  norm_agg, 
+  per_row_metrics, 
   "sim_scaled_mean_agg_ref", 
   "sim_mean_agg") + 
   ggtitle("Replicate level, wrt reference")
 
 plot_scatter(
-  norm_agg_agg, 
+  per_group_metrics, 
   "sim_scaled_mean_agg_ref_mean_agg", 
   "sim_mean_agg_mean_agg") + 
   ggtitle("Perturbation level, wrt reference (mean)")
 
 plot_scatter(
-  norm_agg_agg,
+  per_group_metrics,
   "sim_scaled_mean_agg_ref_median_agg",
   "sim_mean_agg_median_agg") + 
   ggtitle("Perturbation level, wrt reference (median)")
@@ -352,19 +351,19 @@ plot_scatter(
 
 ```{r}
 plot_scatter(
-  norm_agg, 
+  per_row_metrics, 
   "sim_scaled_mean_agg_ref", 
   "sim_scaled_mean_agg_nonrep") + 
   ggtitle("Replicate level, wrt reference, wrt nonreps")
 
 plot_scatter(
-  norm_agg_agg, 
+  per_group_metrics, 
   "sim_scaled_mean_agg_ref_mean_agg", 
   "sim_scaled_mean_agg_nonrep_mean_agg") + 
   ggtitle("Perturbation level, wrt reference, wrt nonreps (mean)")
 
 plot_scatter(
-  norm_agg_agg, 
+  per_group_metrics, 
   "sim_scaled_mean_agg_ref_median_agg", 
   "sim_scaled_mean_agg_nonrep_median_agg") + 
   ggtitle("Perturbation level, wrt reference, wrt nonreps (median)")
@@ -388,7 +387,7 @@ gritpy <-
 
 ```{r}
 gritr <-
-  norm_agg_agg %>%
+  per_group_metrics %>%
   select(
     perturbation = Metadata_pert_name,
     group = Metadata_gene_name,
