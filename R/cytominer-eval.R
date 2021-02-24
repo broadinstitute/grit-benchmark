@@ -245,7 +245,7 @@ sim_drop <-
            filter_side) {
     stopifnot(filter_side %in% c("left", "right"))
     
-    if(is.null(filter_drop)) {
+    if (is.null(filter_drop)) {
       return(sim_df)
     }
     
@@ -484,21 +484,21 @@ sim_munge <-
       
     }
     
-    fetch_ref <- 
-      !is.null(all_same_cols_ref) && 
+    fetch_ref <-
+      !is.null(all_same_cols_ref) &&
       !is.null(reference)
     
-    fetch_rep_ref <- 
-      !is.null(all_same_cols_ref) && 
-      !is.null(reference) && 
+    fetch_rep_ref <-
+      !is.null(all_same_cols_ref) &&
+      !is.null(reference) &&
       !is.null(all_same_cols_rep_ref)
     
-    fetch_non_rep <- 
-      !is.null(any_different_cols_non_rep) && 
+    fetch_non_rep <-
+      !is.null(any_different_cols_non_rep) &&
       !is.null(all_same_cols_non_rep) &&
       !is.null(all_different_cols_non_rep)
     
-    fetch_rep_group <- 
+    fetch_rep_group <-
       !is.null(any_different_cols_group) &&
       !is.null(all_same_cols_group)
     
@@ -710,12 +710,12 @@ sim_metrics <- function(grouped_sim,
     )),
     list(mean_agg = mean)),
     .groups = "keep") %>%
-    rename_with( ~ paste(., sim_type, sep = "_"),
-                 starts_with("sim_scaled")) %>%
+    rename_with(~ paste(., sim_type, sep = "_"),
+                starts_with("sim_scaled")) %>%
     ungroup() %>%
     inner_join(sim_stats %>%
-                 rename_with( ~ paste(., sim_type, sep = "_"),
-                              starts_with("sim")),
+                 rename_with(~ paste(., sim_type, sep = "_"),
+                             starts_with("sim")),
                by = "id1")
   
   # get a summary per group
