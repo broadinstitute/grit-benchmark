@@ -176,7 +176,7 @@ any_different_cols_group <-
     "Metadata_gene_name",
     "Metadata_pert_name")
 
-repgroup <-
+rep_group <-
   sim_df %>%
   sim_some_different_drop_some(
     metadata,
@@ -441,7 +441,7 @@ stopifnot(
 
 ```{r}
 repgroup_annotated <-
-  repgroup %>%
+  rep_group %>%
   sim_annotate(
     metadata,
     annotation_cols = annotation_cols,
@@ -499,7 +499,7 @@ rep %>%
 
 ```{r}
 repgroup_annotated <-
-  repgroup %>%
+  rep_group %>%
   sim_annotate(
     metadata,
     annotation_cols = annotation_cols,
