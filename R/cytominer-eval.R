@@ -678,15 +678,15 @@ sim_munge <-
 #' @export
 #'
 #' @examples
-sim_metrics <- function(grouped_sim,
+sim_metrics <- function(munged_sim,
                         sim_type,
                         annotation_prefix = "Metadata_") {
   group_cols <-
-    str_subset(colnames(grouped_sim), pattern = annotation_prefix)
+    str_subset(colnames(munged_sim), pattern = annotation_prefix)
   
   # compute mean and s.d.
   sim_stats <-
-    grouped_sim %>%
+    munged_sim %>%
     filter(type == sim_type) %>%
     group_by(across(all_of(c("id1", group_cols)))) %>%
     summarise(across(all_of("sim"), list(mean = mean, sd = sd)),
@@ -698,7 +698,7 @@ sim_metrics <- function(grouped_sim,
   
   # scale using mean and s.d.
   sim_norm <-
-    grouped_sim %>%
+    munged_sim %>%
     filter(type == "rep") %>%
     inner_join(sim_stats, by = c("id1")) %>%
     mutate(sim_scaled = (sim - sim_mean) / sim_sd)
@@ -737,14 +737,14 @@ sim_metrics <- function(grouped_sim,
   
   # scale using mean and s.d.
   sim_norm_group <-
-    grouped_sim %>%
+    munged_sim %>%
     filter(type == "rep_group") %>%
     inner_join(sim_stats, by = c("id1")) %>%
     mutate(sim_scaled = (sim - sim_mean) / sim_sd)
   
   # get a summary per group
   sim_norm_group_agg <-
-    sim_norm %>%
+    sim_norm_group %>%
     group_by(across(all_of(group_cols))) %>%
     summarise(across(all_of(c("sim_scaled", "sim")),
                      list(
@@ -753,11 +753,7 @@ sim_metrics <- function(grouped_sim,
               .groups = "keep") %>%
     rename_with( ~ paste(., sim_type, sep = "_"),
                  starts_with("sim_scaled")) %>%
-    ungroup() %>%
-    inner_join(sim_stats %>%
-                 rename_with( ~ paste(., sim_type, sep = "_"),
-                              starts_with("sim")),
-               by = "id1")
+    ungroup()
   
   list(per_row = sim_norm_agg,
        per_set = sim_norm_agg_agg,
