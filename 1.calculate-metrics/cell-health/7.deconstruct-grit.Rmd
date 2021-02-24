@@ -441,7 +441,7 @@ plot_scatter(
 ```
 
 ```{r message=FALSE}
-gritpy <- 
+gritpy_df <- 
   read_tsv("https://raw.githubusercontent.com/broadinstitute/grit-benchmark/31d9812e0c267d3535c85a72ef6bd0104d1a2130/1.calculate-metrics/cell-health/results/cell_health_grit.tsv") %>%
   filter(barcode_control == "cutting_control" & cor_method == "pearson" & grit_replicate_summary_method == "mean") %>%
   arrange(cell_line, perturbation, group) %>%
@@ -456,7 +456,7 @@ gritpy <-
 
 
 ```{r}
-gritr <-
+gritr_df <-
   per_set_group_metrics %>%
   select(
     perturbation = Metadata_pert_name,
@@ -468,8 +468,8 @@ gritr <-
 
 grit_compare <-
   inner_join(
-    gritpy,
-    gritr,
+    gritpy_df,
+    gritr_df,
     by = c("cell_line", "perturbation", "group"),
     suffix = c("_py", "_r")
   )
