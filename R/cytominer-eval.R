@@ -646,7 +646,7 @@ sim_munge <-
     
     if (fetch_rep_ref) {
       combined %<>%
-        bind_rows(repref %>% mutate(type = "rep")) # same tag as ref
+        bind_rows(rep_ref %>% mutate(type = "rep")) # same tag as ref
     }
     
     if (fetch_non_rep) {
@@ -659,9 +659,9 @@ sim_munge <-
         bind_rows(ref %>% mutate(type = "ref"))
     }
     
-    if (fetch_ref_group) {
+    if (fetch_rep_group) {
       combined %<>%
-        bind_rows(ref_group %>% mutate(type = "ref_group"))
+        bind_rows(rep_group %>% mutate(type = "rep_group"))
     }
     
     combined
@@ -694,6 +694,8 @@ sim_metrics <- function(grouped_sim,
     ungroup() %>%
     select(id1, sim_mean, sim_sd)
   
+  # ---- Replicates ----
+  
   # scale using mean and s.d.
   sim_norm <-
     grouped_sim %>%
@@ -710,15 +712,15 @@ sim_metrics <- function(grouped_sim,
     )),
     list(mean_agg = mean)),
     .groups = "keep") %>%
-    rename_with(~ paste(., sim_type, sep = "_"),
-                starts_with("sim_scaled")) %>%
+    rename_with( ~ paste(., sim_type, sep = "_"),
+                 starts_with("sim_scaled")) %>%
     ungroup() %>%
     inner_join(sim_stats %>%
-                 rename_with(~ paste(., sim_type, sep = "_"),
-                             starts_with("sim")),
+                 rename_with( ~ paste(., sim_type, sep = "_"),
+                              starts_with("sim")),
                by = "id1")
   
-  # get a summary per group
+  # get a summary per set
   sim_norm_agg_agg <-
     sim_norm_agg %>%
     ungroup() %>%
@@ -731,6 +733,33 @@ sim_metrics <- function(grouped_sim,
                      )),
               .groups = "keep")
   
+  # ---- Group replicates  ----
+  
+  # scale using mean and s.d.
+  sim_norm_group <-
+    grouped_sim %>%
+    filter(type == "rep_group") %>%
+    inner_join(sim_stats, by = c("id1")) %>%
+    mutate(sim_scaled = (sim - sim_mean) / sim_sd)
+  
+  # get a summary per group
+  sim_norm_group_agg <-
+    sim_norm %>%
+    group_by(across(all_of(group_cols))) %>%
+    summarise(across(all_of(c("sim_scaled", "sim")),
+                     list(
+                       mean_agg = mean, median_agg = median
+                     )),
+              .groups = "keep") %>%
+    rename_with( ~ paste(., sim_type, sep = "_"),
+                 starts_with("sim_scaled")) %>%
+    ungroup() %>%
+    inner_join(sim_stats %>%
+                 rename_with( ~ paste(., sim_type, sep = "_"),
+                              starts_with("sim")),
+               by = "id1")
+  
   list(per_row = sim_norm_agg,
-       per_group = sim_norm_agg_agg)
+       per_set = sim_norm_agg_agg,
+       per_set_group = sim_norm_group_agg)
 }
