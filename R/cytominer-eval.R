@@ -664,6 +664,24 @@ sim_munge <-
         bind_rows(rep_group %>% mutate(type = "rep_group"))
     }
     
+    # add attributes
+    
+    attr(combined, "all_different_cols_non_rep") <-
+      all_different_cols_non_rep
+    attr(combined, "all_same_cols_group") <- all_same_cols_group
+    attr(combined, "all_same_cols_non_rep") <- all_same_cols_non_rep
+    attr(combined, "all_same_cols_ref") <- all_same_cols_ref
+    attr(combined, "all_same_cols_rep") <- all_same_cols_rep
+    attr(combined, "all_same_cols_rep_ref") <- all_same_cols_rep_ref
+    attr(combined, "annotation_cols") <- annotation_cols
+    attr(combined, "any_different_cols_group") <-
+      any_different_cols_group
+    attr(combined, "any_different_cols_non_rep") <-
+      any_different_cols_non_rep
+    attr(combined, "drop_group") <- drop_group
+    attr(combined, "drop_reference") <- drop_reference
+    attr(combined, "reference") <- reference
+    
     combined
   }
 
@@ -672,6 +690,7 @@ sim_munge <-
 #'
 #' @param grouped_sim
 #' @param sim_type
+#' @param calculate_grouped
 #' @param annotation_prefix
 #'
 #' @return
@@ -680,15 +699,21 @@ sim_munge <-
 #' @examples
 sim_metrics <- function(munged_sim,
                         sim_type,
+                        calculate_grouped = FALSE,
                         annotation_prefix = "Metadata_") {
-  group_cols <-
-    str_subset(colnames(munged_sim), pattern = annotation_prefix)
+  if (!is.null(attr(munged_sim, "all_same_cols_rep", TRUE))) {
+    rep_cols <- attr(munged_sim, "all_same_cols_rep", TRUE)
+  } else {
+    message("Warning: Inferring columns specifying replicates from similarity dataframe...")
+    rep_cols <-
+      str_subset(colnames(munged_sim), pattern = annotation_prefix)
+  }
   
   # compute mean and s.d.
   sim_stats <-
     munged_sim %>%
     filter(type == sim_type) %>%
-    group_by(across(all_of(c("id1", group_cols)))) %>%
+    group_by(across(all_of(c("id1", rep_cols)))) %>%
     summarise(across(all_of("sim"), list(mean = mean, sd = sd)),
               .groups = "keep") %>%
     ungroup() %>%
@@ -706,7 +731,7 @@ sim_metrics <- function(munged_sim,
   # get a summary per row
   sim_norm_agg <-
     sim_norm %>%
-    group_by(across(all_of(c("id1", group_cols)))) %>%
+    group_by(across(all_of(c("id1", rep_cols)))) %>%
     summarise(across(all_of(c(
       "sim_scaled", "sim"
     )),
@@ -724,38 +749,56 @@ sim_metrics <- function(munged_sim,
   sim_norm_agg_agg <-
     sim_norm_agg %>%
     ungroup() %>%
-    group_by(across(all_of(c(
-      all_same_cols_rep
-    )))) %>%
+    group_by(across(all_of(c(rep_cols)))) %>%
     summarise(across(-all_of("id1"),
                      list(
                        mean_agg = mean, median_agg = median
                      )),
               .groups = "keep")
   
+  
+  result <-
+    list(per_row = sim_norm_agg,
+         per_set = sim_norm_agg_agg)
+  
+  
   # ---- Group replicates  ----
   
-  # scale using mean and s.d.
-  sim_norm_group <-
-    munged_sim %>%
-    filter(type == "rep_group") %>%
-    inner_join(sim_stats, by = c("id1")) %>%
-    mutate(sim_scaled = (sim - sim_mean) / sim_sd)
+  if (calculate_grouped) {
+    sim_stats <-
+      munged_sim %>%
+      filter(type == sim_type) %>%
+      group_by(across(all_of(rep_cols))) %>%
+      summarise(across(all_of("sim"), list(mean = mean, sd = sd)),
+                .groups = "keep") %>%
+      ungroup()
+    
+    # scale using mean and s.d.
+    sim_norm_group <-
+      munged_sim %>%
+      filter(type == "rep_group") %>%
+      inner_join(sim_stats, by = rep_cols) %>%
+      mutate(sim_scaled = (sim - sim_mean) / sim_sd)
+    
+    # get a summary per group
+    sim_norm_group_agg <-
+      sim_norm_group %>%
+      group_by(across(all_of(rep_cols))) %>%
+      summarise(across(all_of(c(
+        "sim_scaled", "sim"
+      )),
+      list(
+        mean_agg = mean, median_agg = median
+      )),
+      .groups = "keep") %>%
+      rename_with( ~ paste(., sim_type, sep = "_"),
+                   starts_with("sim_scaled")) %>%
+      ungroup()
+    
+    result <-
+      c(result,
+        list(per_set_group = sim_norm_group_agg))
+  }
   
-  # get a summary per group
-  sim_norm_group_agg <-
-    sim_norm_group %>%
-    group_by(across(all_of(group_cols))) %>%
-    summarise(across(all_of(c("sim_scaled", "sim")),
-                     list(
-                       mean_agg = mean, median_agg = median
-                     )),
-              .groups = "keep") %>%
-    rename_with( ~ paste(., sim_type, sep = "_"),
-                 starts_with("sim_scaled")) %>%
-    ungroup()
-  
-  list(per_row = sim_norm_agg,
-       per_set = sim_norm_agg_agg,
-       per_set_group = sim_norm_group_agg)
+  result
 }
