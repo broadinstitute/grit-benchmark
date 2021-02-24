@@ -72,14 +72,16 @@ metadata <- get_annotation(profiles)
 
 
 ```{r}
-if (file.exists("data/sim.parquet")) {
-  message("Loading existing similarity file...")
-  sim_df <- arrow::read_parquet("data/sim.parquet")
-    
-} else {
-  sim_df <- sim_calculate(profiles)
-  sim_df %>% arrow::write_parquet("data/sim.parquet")
-}
+# if (file.exists("data/sim.parquet")) {
+#   message("Loading existing similarity file...")
+#   sim_df <- arrow::read_parquet("data/sim.parquet")
+#     
+# } else {
+#   sim_df <- sim_calculate(profiles)
+#   sim_df %>% arrow::write_parquet("data/sim.parquet")
+# }
+# 
+sim_df <- sim_calculate(profiles)
 ```
 
 # Compute similarity sets
@@ -326,10 +328,10 @@ all_sim_counts %>%
 
 ```{r}
 norm_non_rep_metrics <- 
-  sim_metrics(munged_sim, "non_rep")
+  sim_metrics(munged_sim, "non_rep", calculate_grouped = TRUE)
 
 norm_ref_metrics <- 
-  sim_metrics(munged_sim, "ref")
+  sim_metrics(munged_sim, "ref", calculate_grouped = TRUE)
 
 per_row_metrics <-
   inner_join(
@@ -475,6 +477,162 @@ grit_compare <-
   )
 
 plot_scatter(grit_compare %>% na.omit(), "grit_py", "grit_r")
+```
+
+# Check one
+
+```{r}
+target_guide <- data.frame(
+  Metadata_cell_line = "A549",
+  Metadata_gene_name = "AKT1",
+  Metadata_pert_name = "AKT1-1")
+
+sister_guide <- data.frame(
+  Metadata_cell_line = "A549",
+  Metadata_gene_name = "AKT1",
+  Metadata_pert_name = "AKT1-2")
+
+cutting_controls <- data.frame(
+  Metadata_cell_line = c("A549", "A549", "A549"),
+  Metadata_gene_name = c("Chr2", "Luc", "LacZ")
+)
+
+metadata <- 
+  profiles %>%
+  select(matches("Metadata")) %>% 
+  select(-Metadata_WellCol, -Metadata_WellRow)
+
+features <- function(df) t(as.matrix(df %>% select(-matches("^Metadata_"))))
+
+plate <- function(df) df$Metadata_Plate
+
+p_target_guide <- profiles %>% inner_join(target_guide)
+
+p_sister_guide <- profiles %>% inner_join(sister_guide)
+
+p_cutting_controls <- profiles %>% inner_join(cutting_controls)
+
+# get group similarities
+s_group <- as.vector(cor(features(p_target_guide), features(p_sister_guide)))
+
+# get control similarities (must be on same plate)
+f_same_plate_target_v_control <- 
+  outer(plate(p_target_guide), plate(p_cutting_controls), FUN = "==")
+
+s_controls <-
+  cor(features(p_target_guide), features(p_cutting_controls))[f_same_plate_target_v_control]
+
+# check control counts
+n_ref_count_test <- data.frame(n_ref = length(s_controls))
+
+n_ref_count_check <- 
+  all_sim_counts %>% 
+  ungroup() %>% 
+  inner_join(target_guide) %>% 
+  summarise(n_ref = sum(n_ref))
+
+stopifnot(n_ref_count_test == n_ref_count_check)
+
+
+# check group counts
+n_rep_group_count_test <- data.frame(n_rep_group = length(s_group))
+
+n_rep_group_count_check <- 
+  all_sim_counts %>% 
+  ungroup() %>% 
+  inner_join(target_guide) %>% 
+  summarise(n_rep_group = sum(n_rep_group))
+
+stopifnot(n_rep_group_count_test == n_rep_group_count_check)
+
+s_group_check <- 
+  munged_sim %>% 
+  inner_join(target_guide) %>% 
+  filter(type == "rep_group") %>% 
+  pull("sim")
+
+s_controls_check <- 
+  munged_sim %>% 
+  inner_join(target_guide) %>% 
+  filter(type == "ref") %>% 
+  pull("sim")
+
+stopifnot(all.equal.numeric(sort(s_group_check), sort(s_group)))
+
+stopifnot(all.equal.numeric(sort(s_controls_check), sort(s_controls)))
+```
+
+
+```{r}
+n_ref_count_check
+```
+
+
+```{r}
+n_rep_group_count_test
+```
+```{r}
+data.frame(mean = mean(s_controls), sd = sd(s_controls))
+```
+
+
+```{r}
+# compute grit
+target_grit <- 
+  target_guide %>%
+  mutate(grit = mean(scale(s_group, mean(s_controls), sd(s_controls)))) %>%
+  rename(
+    perturbation = Metadata_pert_name,
+    group = Metadata_gene_name,
+    cell_line = Metadata_cell_line
+  ) %>%
+  select(perturbation, group, cell_line, grit)
+
+target_grit
+```
+
+
+```{r}
+target_grit_check <- 
+gritr_df %>% inner_join(
+  target_guide,
+  by = c(
+    "perturbation" = "Metadata_pert_name",
+    "group" = "Metadata_gene_name",
+    "cell_line" = "Metadata_cell_line"
+  )
+) %>%
+  select(perturbation, group, cell_line, grit)
+
+
+target_grit_check
+
+```
+
+
+```{r}
+gritpy_df %>% inner_join(
+  target_guide,
+  by = c(
+    "perturbation" = "Metadata_pert_name",
+    "group" = "Metadata_gene_name",
+    "cell_line" = "Metadata_cell_line"
+  )
+)
+```
+
+```{r}
+# compute grit
+target_group_cor <- mean(s_group)
+
+data.frame(target_group_cor)
+```
+
+
+```{r}
+per_set_group_metrics %>%
+  inner_join(target_guide) %>%
+  pivot_longer(-all_of(colnames(target_guide)))
 ```
 
 
