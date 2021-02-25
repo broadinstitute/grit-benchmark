@@ -105,12 +105,12 @@ drop_group <-
 reference <-
   data.frame(Metadata_gene_name = c("Chr2", "Luc", "LacZ"))
 
-# all_same_cols_ref <-
-#   c("Metadata_cell_line")
-
 all_same_cols_ref <-
-  c("Metadata_cell_line",
-    "Metadata_Plate")
+  c("Metadata_cell_line")
+
+# all_same_cols_ref <-
+#   c("Metadata_cell_line",
+#     "Metadata_Plate")
 
 # ---- 2. Similarity to replicates (no references) ----
 
@@ -141,14 +141,20 @@ all_same_cols_rep <-
 #
 # Keep, both, (a, b) and (b, a)
 
+# all_same_cols_rep_ref <-
+#   c(
+#     "Metadata_cell_line",
+#     "Metadata_gene_name",
+#     "Metadata_pert_name",
+#     "Metadata_Plate"
+#   )
+
 all_same_cols_rep_ref <-
   c(
     "Metadata_cell_line",
     "Metadata_gene_name",
-    "Metadata_pert_name",
-    "Metadata_Plate"
+    "Metadata_pert_name"
   )
-
 # ---- 4. Similarity to non-replicates ----
 
 # Fetch similarities between
@@ -441,6 +447,7 @@ plot_scatter(
   "sim_median_agg") + 
   ggtitle("Perturbation level, wrt ref (median)")
 ```
+# Compare implementations
 
 ```{r message=FALSE}
 gritpy_df <- 
@@ -479,7 +486,7 @@ grit_compare <-
 plot_scatter(grit_compare %>% na.omit(), "grit_py", "grit_r")
 ```
 
-# Check one
+# Check one case by hand
 
 ```{r}
 target_guide <- data.frame(
@@ -519,8 +526,11 @@ s_group <- as.vector(cor(features(p_target_guide), features(p_sister_guide)))
 f_same_plate_target_v_control <- 
   outer(plate(p_target_guide), plate(p_cutting_controls), FUN = "==")
 
+# s_controls <-
+#   cor(features(p_target_guide), features(p_cutting_controls))[f_same_plate_target_v_control]
+
 s_controls <-
-  cor(features(p_target_guide), features(p_cutting_controls))[f_same_plate_target_v_control]
+  as.vector(cor(features(p_target_guide), features(p_cutting_controls)))
 
 # check control counts
 n_ref_count_test <- data.frame(n_ref = length(s_controls))
@@ -532,7 +542,6 @@ n_ref_count_check <-
   summarise(n_ref = sum(n_ref))
 
 stopifnot(n_ref_count_test == n_ref_count_check)
-
 
 # check group counts
 n_rep_group_count_test <- data.frame(n_rep_group = length(s_group))
