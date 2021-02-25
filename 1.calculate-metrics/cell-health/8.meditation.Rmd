@@ -1,5 +1,5 @@
 ---
-title: "Meditation on similarity statistics"
+title: "A meditation on similarity statistics"
 output: 
   html_notebook:
     toc: true
@@ -20,6 +20,7 @@ library(arrow)
 
 ```{r}
 source("../../R/cytominer-eval.R")
+source("../../R/cytoplot.R")
 ```
 
 ```{r}
@@ -496,9 +497,8 @@ per_set_all_metrics %>%
 ```
 
 
-# Plot distributions
 
-## Focus on one guide
+# Focus on one guide
 
 ```{r}
 target_guide <- data.frame(
@@ -519,7 +519,49 @@ cutting_controls <- data.frame(
 metadata <- 
   profiles %>%
   select(matches("Metadata"))
+```
 
+```{r message=FALSE}
+plate <- "SQ00014611"
+metadata_include <- list(target_guide,
+                         drop_group,
+                         sister_guide,
+                         cutting_controls) %>%
+  map_df(function(df) {
+    metadata %>%
+      filter(Metadata_Plate == plate) %>%
+      inner_join(df)
+  })
+
+metadata_filtered <-
+  metadata  %>%
+  filter(Metadata_Plate == plate) %>%
+  anti_join(metadata_include) %>%
+  mutate(Metadata_pert_name = "Other perturbations") %>%
+  mutate(Metadata_gene_name = "Other perturbations") %>%
+  bind_rows(metadata_include) %>%
+  mutate(Metadata_pert_name = case_when(
+    Metadata_gene_name %in% cutting_controls$Metadata_gene_name ~ "Cutting controls",
+    TRUE ~ Metadata_pert_name
+  ))%>%
+  mutate(Metadata_gene_name = case_when(
+    Metadata_gene_name %in% cutting_controls$Metadata_gene_name ~ "Cutting controls",
+    TRUE ~ Metadata_gene_name
+  ))
+```
+
+
+```{r message=FALSE}
+p <- 
+  metadata_filtered %>%
+  plot_plate("Metadata_pert_name", well_position = "Metadata_Well") 
+
+p + scale_fill_brewer(palette="Accent")
+
+```
+
+
+```{r}
 features <- function(df) t(as.matrix(df %>% select(-matches("^Metadata_"))))
 
 plate <- function(df) df$Metadata_Plate
@@ -633,6 +675,7 @@ display_metrics_distributions <- function(target_guide) {
 }
 ```
 
+
 ```{r}
 target_guide <- data.frame(
   Metadata_cell_line = "A549",
@@ -640,6 +683,37 @@ target_guide <- data.frame(
   Metadata_pert_name = "ITGAV-1")
 
 display_metrics_distributions(target_guide)
+```
+
+
+```{r}
+target_guide <- data.frame(
+  Metadata_cell_line = "A549",
+  Metadata_gene_name = "ITGAV",
+  Metadata_pert_name = "ITGAV-1")
+
+target_distributions <-
+  target_sim <- 
+  sim_munged_query(munged_sim, target_guide, reference, all_same_cols_ref) %>%
+  mutate(type = factor(type, levels = c("rep", "rep_group", "ref", "ref_rep", "non_rep"))) %>%
+  mutate(type = 
+           recode(type, 
+                  non_rep = "similarity_to_non_replicates",
+                  ref_rep = "similarity_among_reference_replicates",
+                  ref = "similarity_to_reference",
+                  rep = "similarity_among_replicates",
+                  rep_group = "similarity_to_group_replicates",
+                  )
+         )
+```
+
+
+```{r}
+for (type in unique(target_distributions$type)) {
+  target_distributions %>%
+    filter(type == {{type}}) %>% 
+    write_csv(glue::glue("~/Desktop/{type}.csv"))
+}
 ```
 
 
