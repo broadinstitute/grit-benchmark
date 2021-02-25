@@ -1,6 +1,5 @@
 ---
 title: "Deconstruct Grit"
-author: "Shantanu Singh"
 output: 
   html_notebook:
     toc: true
@@ -10,42 +9,7 @@ output:
     theme: lumen
 ---
 
-```
-output: 
-  html_notebook:
-    toc: true
-    toc_float: true
-    toc_depth: 3
-    number_sections: true
-    theme: lumen
-```
-
-```
-output: github_document
-```
-
-# Boilerplate 
-
-```{r echo=FALSE}
-show_table <- print
-```
-
-If running interactively in RStudio, 
-
-- change `output` in the header of this markdown to `html_notebook` and
-- change to `eval=TRUE` below
-
-When knitting for pushing to GitHub,
-
-- change `output` in the header of this markdown to `github_document` and
-- change to `eval=FALSE` below
-
-```{r eval=FALSE}
-show_table <- knitr::kable
-knitr::opts_chunk$set(fig.width = 6, fig.asp = 2/3)
-```
-
-# Libraries
+# Setup
 
 ```{r message=FALSE}
 library(magrittr)
@@ -56,6 +20,10 @@ library(arrow)
 
 ```{r}
 source("../../R/cytominer-eval.R")
+```
+
+```{r}
+set.seed(42)
 ```
 
 # Load data
@@ -72,16 +40,16 @@ metadata <- get_annotation(profiles)
 
 
 ```{r}
-# if (file.exists("data/sim.parquet")) {
-#   message("Loading existing similarity file...")
-#   sim_df <- arrow::read_parquet("data/sim.parquet")
-#     
-# } else {
-#   sim_df <- sim_calculate(profiles)
-#   sim_df %>% arrow::write_parquet("data/sim.parquet")
-# }
-# 
-sim_df <- sim_calculate(profiles)
+if (file.exists("data/sim.parquet")) {
+  message("Loading existing similarity file...")
+  sim_df <- arrow::read_parquet("data/sim.parquet")
+
+} else {
+  sim_df <- sim_calculate(profiles)
+  sim_df %>% arrow::write_parquet("data/sim.parquet")
+}
+
+#sim_df <- sim_calculate(profiles)
 ```
 
 # Compute similarity sets
@@ -338,26 +306,26 @@ norm_non_rep_metrics <-
 
 norm_ref_metrics <- 
   sim_metrics(munged_sim, "ref", calculate_grouped = TRUE)
+```
 
+
+```{r}
 per_row_metrics <-
   inner_join(
     norm_non_rep_metrics[["per_row"]],
-    norm_ref_metrics[["per_row"]],
-    by = c("id1", all_same_cols_rep, "sim_mean_agg")
+    norm_ref_metrics[["per_row"]]
   )
 
 per_set_metrics <-
   inner_join(
     norm_non_rep_metrics[["per_set"]],
-    norm_ref_metrics[["per_set"]],
-    by = c(all_same_cols_rep, "sim_mean_agg_mean_agg", "sim_mean_agg_median_agg")
+    norm_ref_metrics[["per_set"]]
   )
 
 per_set_group_metrics <-
   inner_join(
     norm_non_rep_metrics[["per_set_group"]],
-    norm_ref_metrics[["per_set_group"]],
-    by = c(all_same_cols_rep, "sim_mean_agg", "sim_median_agg")
+    norm_ref_metrics[["per_set_group"]]
   )
 ```
 
@@ -375,20 +343,26 @@ plot_scatter <- function(df, x0, y0) {
 ```{r}
 plot_scatter(
   per_row_metrics, 
-  "sim_scaled_mean_agg_non_rep", 
-  "sim_mean_agg") + 
+  "sim_scaled_mean_non_rep_i", 
+  "sim_mean_i") + 
   ggtitle("Replicate level, wrt non_reps")
+```
 
+
+```{r}
 plot_scatter(
   per_set_metrics, 
-  "sim_scaled_mean_agg_non_rep_mean_agg", 
-  "sim_mean_agg_mean_agg") + 
+  "sim_scaled_mean_non_rep_i_mean_i", 
+  "sim_mean_i_mean_i") + 
   ggtitle("Perturbation level, wrt non_reps (mean)")
+```
 
+
+```{r}
 plot_scatter(
   per_set_metrics, 
-  "sim_scaled_mean_agg_non_rep_median_agg", 
-  "sim_mean_agg_median_agg") + 
+  "sim_scaled_mean_non_rep_i_median_i", 
+  "sim_mean_i_median_i") + 
   ggtitle("Perturbation level, wrt non_reps (median)")
 ```
 
@@ -396,20 +370,26 @@ plot_scatter(
 ```{r}
 plot_scatter(
   per_row_metrics, 
-  "sim_scaled_mean_agg_ref", 
-  "sim_mean_agg") + 
+  "sim_scaled_mean_ref_i", 
+  "sim_mean_i") + 
   ggtitle("Replicate level, wrt reference")
+```
 
+
+```{r}
 plot_scatter(
   per_set_metrics, 
-  "sim_scaled_mean_agg_ref_mean_agg", 
-  "sim_mean_agg_mean_agg") + 
+  "sim_scaled_mean_ref_i_mean_i", 
+  "sim_mean_i_mean_i") + 
   ggtitle("Perturbation level, wrt reference (mean)")
+```
 
+
+```{r}
 plot_scatter(
   per_set_metrics,
-  "sim_scaled_mean_agg_ref_median_agg",
-  "sim_mean_agg_median_agg") + 
+  "sim_scaled_mean_ref_i_median_i",
+  "sim_mean_i_median_i") + 
   ggtitle("Perturbation level, wrt reference (median)")
 ```
 
@@ -417,36 +397,31 @@ plot_scatter(
 ```{r}
 plot_scatter(
   per_row_metrics, 
-  "sim_scaled_mean_agg_ref", 
-  "sim_scaled_mean_agg_non_rep") + 
+  "sim_scaled_mean_ref_i", 
+  "sim_scaled_mean_non_rep_i") + 
   ggtitle("Replicate level, wrt reference, wrt non_reps")
-
-plot_scatter(
-  per_set_metrics, 
-  "sim_scaled_mean_agg_ref_mean_agg", 
-  "sim_scaled_mean_agg_non_rep_mean_agg") + 
-  ggtitle("Perturbation level, wrt reference, wrt non_reps (mean)")
-
-plot_scatter(
-  per_set_metrics, 
-  "sim_scaled_mean_agg_ref_median_agg", 
-  "sim_scaled_mean_agg_non_rep_median_agg") + 
-  ggtitle("Perturbation level, wrt reference, wrt non_reps (median)")
-
 ```
+
+
+```{r}
+plot_scatter(
+  per_set_metrics, 
+  "sim_scaled_mean_ref_i_mean_i", 
+  "sim_scaled_mean_non_rep_i_mean_i") + 
+  ggtitle("Perturbation level, wrt reference, wrt non_reps (mean)")
+```
+
+
 ```{r}
 plot_scatter(
   per_set_group_metrics, 
-  "sim_scaled_mean_agg_ref", 
-  "sim_mean_agg") + 
+  "sim_scaled_mean_ref_g", 
+  "sim_mean_g") + 
   ggtitle("Perturbation level, wrt ref (mean)")
-
-plot_scatter(
-  per_set_group_metrics, 
-  "sim_scaled_median_agg_ref", 
-  "sim_median_agg") + 
-  ggtitle("Perturbation level, wrt ref (median)")
 ```
+
+
+
 # Compare implementations
 
 ```{r message=FALSE}
@@ -470,7 +445,7 @@ gritr_df <-
   select(
     perturbation = Metadata_pert_name,
     group = Metadata_gene_name,
-    grit = sim_scaled_mean_agg_ref,
+    grit = sim_scaled_mean_ref_g,
     cell_line = Metadata_cell_line
   ) %>%
   arrange(cell_line, perturbation, group)

@@ -1,0 +1,694 @@
+---
+title: "Meditation on similarity statistics"
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+    theme: lumen
+---
+
+# Setup
+
+```{r message=FALSE}
+library(magrittr)
+library(tidyverse)
+library(arrow)
+```
+
+
+```{r}
+source("../../R/cytominer-eval.R")
+```
+
+```{r}
+set.seed(42)
+```
+
+# Load data
+
+```{r message=FALSE}
+# read these features
+# https://github.com/broadinstitute/grit-benchmark/blob/31d9812e0c267d3535c85a72ef6bd0104d1a2130/1.calculate-metrics/cell-health/0.calculate-grit.ipynb
+# (See chunk 4)
+
+profiles <- 
+  read_csv("data/cell_health_merged_feature_select.csv.gz") %>% 
+  select(-Metadata_WellCol, -Metadata_WellRow)
+
+metadata <- get_annotation(profiles)
+variables <- get_matrix(profiles)
+```
+
+
+```{r}
+if (file.exists("data/sim.parquet")) {
+  message("Loading existing similarity file...")
+  sim_df <- arrow::read_parquet("data/sim.parquet")
+
+} else {
+  sim_df <- sim_calculate(profiles)
+  sim_df %>% arrow::write_parquet("data/sim.parquet")
+}
+```
+# Inspect data
+
+## Structure 
+
+Random sampling of rows
+
+```{r}
+metadata %>% sample_n(5)
+```
+
+Random sampling of columns
+
+```{r}
+variables %>% select(sample(ncol(variables), 5)) %>% sample_n(5)
+```
+
+## Counts
+
+### Totals
+
+Total number
+
+```{r}
+count(metadata)
+```
+
+### Stratified
+
+Per plate
+
+```{r}
+metadata %>% group_by(Metadata_Plate) %>% tally()
+```
+
+Per cell line
+
+```{r}
+metadata %>% group_by(Metadata_Plate, Metadata_cell_line) %>% tally()
+```
+
+Per gene
+
+```{r}
+metadata %>% group_by(Metadata_cell_line, Metadata_gene_name) %>% tally() %>% ungroup %>% sample_n(5)
+```
+
+`n_genes` have `n_wells`
+
+```{r}
+metadata %>% 
+  group_by(Metadata_cell_line, Metadata_gene_name) %>% 
+  tally(name = "n_wells") %>%
+  group_by(Metadata_cell_line, n_wells) %>%
+  tally(name = "n_genes") %>%
+  select(Metadata_cell_line, n_genes, n_wells) %>%
+  inner_join(metadata %>% distinct(Metadata_cell_line) %>% slice(1)) %>% 
+  arrange(desc(n_genes))
+```
+
+Per perturbation
+
+```{r}
+metadata %>% 
+  group_by(Metadata_cell_line, Metadata_gene_name, Metadata_pert_name) %>% 
+  tally() %>% 
+  ungroup() %>% 
+  sample_n(5)
+```
+
+`n_perts` have `n_wells`
+
+```{r}
+metadata %>% 
+  group_by(Metadata_cell_line, Metadata_gene_name, Metadata_pert_name) %>% 
+  tally(name = "n_wells") %>%
+  group_by(Metadata_cell_line, n_wells) %>%
+  tally(name = "n_perts") %>%
+  select(Metadata_cell_line, n_perts, n_wells) %>%
+  inner_join(metadata %>% distinct(Metadata_cell_line) %>% slice(1)) %>% 
+  arrange(desc(n_perts))
+```
+
+`n_genes` have `n_perts`
+
+```{r}
+metadata %>% 
+  distinct(Metadata_cell_line, Metadata_gene_name, Metadata_pert_name) %>% 
+  group_by(Metadata_cell_line, Metadata_gene_name) %>%
+  tally(name = "n_perts") %>%
+  group_by(Metadata_cell_line, n_perts) %>%
+  tally(name = "n_genes") %>%
+  select(Metadata_cell_line, n_genes, n_perts) %>%
+  inner_join(metadata %>% distinct(Metadata_cell_line) %>% slice(1)) %>% 
+  arrange(desc(n_perts))
+```
+
+Zoom in on a single plate
+
+```{r}
+metadata %>% 
+  inner_join(metadata %>% distinct(Metadata_Plate) %>% slice(1)) %>% 
+  group_by(Metadata_cell_line, Metadata_gene_name, Metadata_pert_name) %>% 
+  tally(name = "n_wells") %>%
+  group_by(Metadata_cell_line, n_wells) %>%
+  tally(name = "n_perts") %>%
+  select(Metadata_cell_line, n_perts, n_wells) %>%
+  inner_join(metadata %>% distinct(Metadata_cell_line, Metadata_Plate) %>% slice(1)) %>% 
+  arrange(desc(n_perts)) %>%
+  select(Metadata_Plate, Metadata_cell_line, everything())
+```
+
+```{r rows.print=20}
+metadata %>% 
+  inner_join(metadata %>% distinct(Metadata_Plate) %>% slice(1)) %>% 
+  group_by(Metadata_cell_line, Metadata_gene_name, Metadata_pert_name) %>% 
+  tally(name = "n_wells") %>%
+  filter(n_wells > 2) %>%
+  arrange(Metadata_gene_name)
+```
+
+```{r}
+controls <- data.frame(Metadata_gene_name = c("Chr2", "Luc", "LacZ"))
+
+metadata %>% 
+  inner_join(metadata %>% distinct(Metadata_Plate) %>% slice(1)) %>% 
+  inner_join(controls) %>%
+  group_by(Metadata_cell_line, Metadata_gene_name, Metadata_pert_name) %>% 
+  tally(name = "n_wells")
+
+metadata %>% 
+  inner_join(metadata %>% distinct(Metadata_Plate) %>% slice(1)) %>% 
+  inner_join(controls) %>%
+  tally(name = "n_wells")
+```
+
+## Key groups
+
+### Number of perturbations per gene
+
+`n_genes` have `n_perts`
+
+```{r}
+metadata %>% 
+  distinct(Metadata_cell_line, Metadata_gene_name, Metadata_pert_name) %>% 
+  group_by(Metadata_cell_line, Metadata_gene_name) %>%
+  tally(name = "n_perts") %>%
+  group_by(Metadata_cell_line, n_perts) %>%
+  tally(name = "n_genes") %>%
+  select(Metadata_cell_line, n_genes, n_perts) %>%
+  inner_join(metadata %>% distinct(Metadata_cell_line) %>% slice(1)) %>% 
+  arrange(desc(n_perts))
+```
+
+### Number of wells per perturbation
+
+`n_perts` have `n_wells`
+
+```{r}
+metadata %>% 
+  group_by(Metadata_cell_line, Metadata_gene_name, Metadata_pert_name) %>% 
+  tally(name = "n_wells") %>%
+  group_by(Metadata_cell_line, n_wells) %>%
+  tally(name = "n_perts") %>%
+  select(Metadata_cell_line, n_perts, n_wells) %>%
+  inner_join(metadata %>% distinct(Metadata_cell_line) %>% slice(1)) %>% 
+  arrange(desc(n_perts))
+```
+
+### Number of control wells (per plate)
+
+```{r}
+controls <- data.frame(Metadata_gene_name = c("Chr2", "Luc", "LacZ"))
+
+metadata %>% 
+  inner_join(metadata %>% distinct(Metadata_Plate) %>% slice(1)) %>% 
+  inner_join(controls) %>%
+  group_by(Metadata_cell_line, Metadata_gene_name, Metadata_pert_name) %>% 
+  tally(name = "n_wells")
+
+metadata %>% 
+  inner_join(metadata %>% distinct(Metadata_Plate) %>% slice(1)) %>% 
+  inner_join(controls) %>%
+  tally(name = "n_wells")
+```
+
+# Compute similarity sets
+
+## Filter out some rows
+
+```{r}
+drop_group <-
+  data.frame(Metadata_gene_name = "EMPTY")
+```
+
+## Similarity to reference
+
+Fetch similarities between
+
+a. all rows (except, optionally those containing `reference`)
+
+and 
+
+b. all rows containing `reference`
+
+Do so only for those (a, b) pairs that 
+
+- have *same* values in *all* columns of `all_same_cols_ref`
+
+```{r}
+reference <-
+  data.frame(Metadata_gene_name = c("Chr2", "Luc", "LacZ"))
+
+# all_same_cols_ref <-
+#   c("Metadata_cell_line")
+
+all_same_cols_ref <-
+  c("Metadata_cell_line",
+    "Metadata_Plate")
+```
+
+## Similarity to replicates (no references)
+
+Fetch similarities between
+
+a. all rows except `reference` rows
+
+and
+
+b. all rows except `reference` rows (i.e. to each other)
+
+Do so for only those (a, b) pairs that 
+
+- have *same* values in *all* columns of `all_same_cols_rep`
+
+Keep, both, (a, b) and (b, a)
+
+```{r}
+all_same_cols_rep <-
+  c("Metadata_cell_line",
+    "Metadata_gene_name",
+    "Metadata_pert_name")
+```
+
+## Similarity to replicates (only references)
+
+Fetch similarities between
+
+a. all rows containing `reference`
+
+and
+
+b. all rows containing `reference` (i.e. to each other)
+
+Do so for only those (a, b) pairs that 
+
+- have *same* values in *all* columns of `all_same_cols_rep_ref`. 
+
+Keep, both, (a, b) and (b, a)
+
+```{r}
+all_same_cols_rep_ref <-
+  c(
+    "Metadata_cell_line",
+    "Metadata_gene_name",
+    "Metadata_pert_name",
+    "Metadata_Plate"
+  )
+
+# all_same_cols_rep_ref <-
+#   c(
+#     "Metadata_cell_line",
+#     "Metadata_gene_name",
+#     "Metadata_pert_name"
+#   )
+```
+
+## Similarity to non-replicates
+
+Fetch similarities between
+
+a. all rows (except, optionally, `reference` rows)
+
+and
+
+b. all rows except `reference` rows
+
+Do so for only those (a, b) pairs that 
+
+- have *same* values in *all* columns of `all_same_cols_non_rep`
+
+- have *different* values in *all* columns `all_different_cols_non_rep`
+
+- have *different* values in *at least one* column of `any_different_cols_non_rep`
+
+Keep, both, (a, b) and (b, a)
+
+```{r}
+any_different_cols_non_rep <-
+  c("Metadata_cell_line",
+    "Metadata_gene_name",
+    "Metadata_pert_name")
+
+all_same_cols_non_rep <-
+  c("Metadata_cell_line", 
+    "Metadata_Plate")
+
+all_different_cols_non_rep <-
+  c("Metadata_gene_name")
+```
+
+## Similarity to group
+
+Fetch similarities between
+
+a. all rows 
+
+and 
+
+b. all rows
+
+Do so only for those (a, b) pairs that 
+
+- have *same* values in *all* columns of `all_same_cols_group`
+
+- have *different* values in *at least one* column of `any_different_cols_group`
+
+```{r}
+all_same_cols_group <-
+  c("Metadata_cell_line",
+    "Metadata_gene_name")
+
+any_different_cols_group <-
+  c("Metadata_cell_line",
+    "Metadata_gene_name",
+    "Metadata_pert_name")
+```
+
+## Combine all and annotate the similarity matrix
+
+```{r}
+annotation_cols <-
+  c("Metadata_cell_line",
+    "Metadata_gene_name",
+    "Metadata_pert_name")
+
+munged_sim <-
+  sim_munge(
+    sim_df,
+    metadata,
+    reference,
+    all_same_cols_rep = all_same_cols_rep,
+    all_same_cols_rep_ref = all_same_cols_rep_ref,
+    all_same_cols_ref = all_same_cols_ref,
+    any_different_cols_non_rep = any_different_cols_non_rep,
+    all_same_cols_non_rep = all_same_cols_non_rep,
+    all_different_cols_non_rep = all_different_cols_non_rep,
+    any_different_cols_group = any_different_cols_group,
+    all_same_cols_group = all_same_cols_group,
+    annotation_cols = annotation_cols,
+    drop_group = drop_group
+  )
+```
+
+# Compute metrics
+
+```{r}
+norm_non_rep_metrics <- 
+  sim_metrics(munged_sim, "non_rep", calculate_grouped = TRUE)
+
+norm_ref_metrics <- 
+  sim_metrics(munged_sim, "ref", calculate_grouped = TRUE)
+
+per_row_metrics <-
+  inner_join(
+    norm_non_rep_metrics[["per_row"]],
+    norm_ref_metrics[["per_row"]]
+  )
+
+per_set_metrics <-
+  inner_join(
+    norm_non_rep_metrics[["per_set"]],
+    norm_ref_metrics[["per_set"]]
+  )
+
+per_set_group_metrics <-
+  inner_join(
+    norm_non_rep_metrics[["per_set_group"]],
+    norm_ref_metrics[["per_set_group"]]
+  )
+
+per_set_all_metrics <-
+  per_set_group_metrics %>%
+  inner_join(per_set_metrics, by = c(all_same_cols_rep))
+```
+
+
+```{r}
+metrics <-
+  per_set_all_metrics %>%
+  mutate(
+    grit_group = sim_scaled_mean_ref_g,
+    grit_indiv = sim_scaled_mean_ref_i_mean_i
+  ) %>%
+  select(all_of(all_same_cols_rep), everything())
+```
+
+
+# Inspect metrics
+
+```{r fig.width=6}
+rename_cols <- function(coln) {
+  coln %>%
+    str_remove_all("sim_")
+}
+```
+
+```{r fig.width=6}
+per_set_all_metrics %>%
+  rename_with(rename_cols, starts_with("sim_")) %>%
+  select(-matches("Metadata|median"), -matches("stat")) %>%
+  select(matches("^scaled_"), matches("stat"), everything()) %>%
+  cor() %>%
+  corrplot::corrplot(tl.pos = "ld", type = "lower", order = "hclust", method = "ellipse")
+```
+
+```{r}
+per_set_all_metrics %>%
+  rename_with(rename_cols, starts_with("sim_")) %>%
+  select(-matches("Metadata|median")) %>%
+  select(matches("stat")) %>%
+  cor() %>%
+  corrplot::corrplot(tl.pos = "ld", type = "lower", order = "hclust", method = "ellipse")
+```
+
+```{r fig.width=6}
+per_set_all_metrics %>%
+  rename_with(rename_cols, starts_with("sim_")) %>%
+  select(-matches("Metadata|median")) %>%
+  select(matches("^scaled_"), matches("stat"), everything()) %>%
+  cor() %>%
+  corrplot::corrplot(tl.pos = "ld", type = "lower", order = "hclust", method = "ellipse")
+```
+
+
+# Plot distributions
+
+## Focus on one guide
+
+```{r}
+target_guide <- data.frame(
+  Metadata_cell_line = "A549",
+  Metadata_gene_name = "ITGAV",
+  Metadata_pert_name = "ITGAV-1")
+
+sister_guide <- data.frame(
+  Metadata_cell_line = "A549",
+  Metadata_gene_name = "ITGAV",
+  Metadata_pert_name = "ITGAV-2")
+
+cutting_controls <- data.frame(
+  Metadata_cell_line = c("A549", "A549", "A549"),
+  Metadata_gene_name = c("Chr2", "Luc", "LacZ")
+)
+
+metadata <- 
+  profiles %>%
+  select(matches("Metadata"))
+
+features <- function(df) t(as.matrix(df %>% select(-matches("^Metadata_"))))
+
+plate <- function(df) df$Metadata_Plate
+
+p_target_guide <- profiles %>% inner_join(target_guide)
+
+p_sister_guide <- profiles %>% inner_join(sister_guide)
+
+p_cutting_controls <- profiles %>% inner_join(cutting_controls)
+```
+
+
+```{r}
+p_target_guide %>% group_by(across(all_of(unique(c(all_same_cols_rep, all_same_cols_ref))))) %>% tally()
+```
+
+
+```{r}
+p_sister_guide %>% group_by(across(all_of(unique(c(all_same_cols_rep, all_same_cols_ref))))) %>% tally()
+```
+
+
+```{r}
+p_cutting_controls %>% group_by(across(all_of(all_same_cols_ref))) %>% tally()
+```
+
+
+```{r}
+all_sim_counts <-
+  munged_sim %>%
+  group_by(across(all_of(c("id1", all_same_cols_rep, "type")))) %>%
+  tally() %>%
+  arrange(across(all_of(all_same_cols_rep))) %>%
+  pivot_wider(names_from = "type",
+              names_prefix = "n_",
+              values_from = n,
+              values_fill = 0)
+```
+
+
+```{r}
+all_sim_counts %>%
+  inner_join(target_guide)
+```
+
+```{r}
+sim_munged_query <-
+  function(msim, query, get_reference = NULL, all_same_cols_ref = NULL) {
+    result <-
+      msim %>% inner_join(query, by = colnames(query))
+    
+    if (!is.null(reference)) {
+      
+      query %<>% select(any_of(all_same_cols_ref))
+      
+      result %<>%
+        bind_rows(
+          msim %>%
+            inner_join(reference, by = colnames(reference)) %>%
+            inner_join(query, by = colnames(query)) %>%
+            filter(type == "rep") %>%
+            mutate(type = "ref_rep")
+        )
+    }
+    
+  }
+```
+
+```{r}
+target_distributions <-
+  target_sim <- 
+  sim_munged_query(munged_sim, target_guide, reference, all_same_cols_ref)
+
+target_distributions %>%
+  group_by(type) %>%
+  tally()
+```
+
+
+
+
+```{r}
+display_metrics_distributions <- function(target_guide) {
+  target_distributions <-
+    target_sim <- 
+    sim_munged_query(munged_sim, target_guide, reference, all_same_cols_ref) %>%
+    mutate(type = factor(type, levels = c("rep", "rep_group", "ref", "ref_rep", "non_rep"))) %>%
+    mutate(type = 
+             recode(type, 
+                    non_rep = "similarity to non-replicates",
+                    ref_rep = "similarity among reference replicates (fixed)",
+                    ref = "similarity to reference",
+                    rep = "similarity among replicates",
+                    rep_group = "similarity to group replicates",
+                    )
+           )
+  
+  p <- 
+    target_distributions %>%
+    ggplot(aes(sim)) + geom_histogram(binwidth = .02) + facet_wrap(~type, ncol = 1)
+  
+  df <- 
+    per_set_all_metrics %>%
+    select(-matches("stat|median")) %>%
+    inner_join(target_guide, by = colnames(target_guide)) %>%
+    pivot_longer(-all_of(str_subset(colnames(per_set_all_metrics), "Metadata_")))
+  
+  print(p)
+  
+  df
+}
+```
+
+```{r}
+target_guide <- data.frame(
+  Metadata_cell_line = "A549",
+  Metadata_gene_name = "ITGAV",
+  Metadata_pert_name = "ITGAV-1")
+
+display_metrics_distributions(target_guide)
+```
+
+
+```{r}
+target_guide <- data.frame(
+  Metadata_cell_line = "A549",
+  Metadata_gene_name = "ITGAV",
+  Metadata_pert_name = "ITGAV-2")
+
+display_metrics_distributions(target_guide)
+```
+
+
+```{r}
+target_guide <- data.frame(
+  Metadata_cell_line = "A549",
+  Metadata_gene_name = "CCND1",
+  Metadata_pert_name = "CCND1-1")
+
+display_metrics_distributions(target_guide)
+```
+
+
+```{r}
+target_guide <- data.frame(
+  Metadata_cell_line = "A549",
+  Metadata_gene_name = "CCND1",
+  Metadata_pert_name = "CCND1-2")
+
+display_metrics_distributions(target_guide)
+```
+
+
+```{r}
+target_guide <- data.frame(
+  Metadata_cell_line = "A549",
+  Metadata_gene_name = "STAT3",
+  Metadata_pert_name = "STAT3-1")
+
+display_metrics_distributions(target_guide)
+```
+
+
+```{r}
+target_guide <- data.frame(
+  Metadata_cell_line = "A549",
+  Metadata_gene_name = "MYC",
+  Metadata_pert_name = "MYC-1")
+
+display_metrics_distributions(target_guide)
+```
+
