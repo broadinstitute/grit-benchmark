@@ -724,7 +724,7 @@ sim_metrics <- function(munged_sim,
       # scale using mean and s.d. of the `sim_type` distribution
       
       join_cols <-
-        intersect(colnames(munged_sim), colnames(sim_stats)) # = rep_cols
+        intersect(colnames(munged_sim), colnames(sim_stats))
       
       sim_norm <-
         munged_sim %>%
@@ -759,7 +759,6 @@ sim_metrics <- function(munged_sim,
       
       sim_norm_agg
     }
-  
   
   # ---- Replicates ----
   sim_norm_agg <-
