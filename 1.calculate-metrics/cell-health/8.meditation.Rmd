@@ -632,7 +632,6 @@ sim_munged_query <-
 
 ```{r}
 target_distributions <-
-  target_sim <- 
   sim_munged_query(munged_sim, target_guide, reference, all_same_cols_ref)
 
 target_distributions %>%
@@ -646,9 +645,9 @@ target_distributions %>%
 ```{r}
 display_metrics_distributions <- function(target_guide) {
   target_distributions <-
-    target_sim <- 
     sim_munged_query(munged_sim, target_guide, reference, all_same_cols_ref) %>%
     mutate(type = factor(type, levels = c("rep", "rep_group", "ref", "ref_rep", "non_rep"))) %>%
+    mutate(id1 = ifelse(type == "ref_rep", -1, id1)) %>%
     mutate(type = 
              recode(type, 
                     non_rep = "similarity to non-replicates",
@@ -661,7 +660,10 @@ display_metrics_distributions <- function(target_guide) {
   
   p <- 
     target_distributions %>%
-    ggplot(aes(sim)) + geom_histogram(binwidth = .02) + facet_wrap(~type, ncol = 1)
+    ggplot(aes(sim, fill = as.factor(id1))) + 
+    geom_histogram(binwidth = .02) + 
+    facet_wrap(~type, ncol = 1, scales = "free_y") +
+    guides(fill=FALSE)
   
   df <- 
     per_set_all_metrics %>%
@@ -693,7 +695,6 @@ target_guide <- data.frame(
   Metadata_pert_name = "ITGAV-1")
 
 target_distributions <-
-  target_sim <- 
   sim_munged_query(munged_sim, target_guide, reference, all_same_cols_ref) %>%
   mutate(type = factor(type, levels = c("rep", "rep_group", "ref", "ref_rep", "non_rep"))) %>%
   mutate(type = 
