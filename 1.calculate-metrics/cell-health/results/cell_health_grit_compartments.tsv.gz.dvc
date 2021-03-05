@@ -1,0 +1,4 @@
+outs:
+- md5: 63b68d76be645c941db6c566ab1fd090
+  size: 261394
+  path: cell_health_grit_compartments.tsv.gz

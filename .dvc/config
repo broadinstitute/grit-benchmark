@@ -1,0 +1,4 @@
+[core]
+    remote = storage
+['remote "storage"']
+    url = s3://imaging-platform/projects/2021_01_04_Grit/grit-benchmark/1.calculate-metrics/cell-health/results/
