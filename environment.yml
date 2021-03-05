@@ -7,6 +7,7 @@ dependencies:
 - conda-forge::pandas=1.2
 - conda-forge::numpy
 - conda-forge::dvc=2.0.2
+- conda-forge::dvc-s3=2.0.2
 - conda-forge::pathlib
 - conda-forge::requests
 - conda-forge::jupyter
