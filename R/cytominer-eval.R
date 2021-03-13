@@ -307,28 +307,28 @@ sim_all_same <-
            drop_lower = FALSE) {
     metadata_i <-
       metadata %>%
-      select(id, all_of(all_same_cols)) %>%
-      unite("all_same_col", all_of(all_same_cols), sep = ":")
+      dplyr::select(id, all_of(all_same_cols)) %>%
+      tidyr::unite("all_same_col", all_of(all_same_cols), sep = ":")
     
     ids <-
-      inner_join(metadata_i,
+      dplyr::inner_join(metadata_i,
                  metadata_i,
                  by = "all_same_col",
                  suffix = c("1", "2"))
     
     if (include_group_tag) {
-      ids %<>% select(id1, id2, group = all_same_col)
+      ids %<>% dplyr::select(id1, id2, group = all_same_col)
       
     } else {
-      ids %<>% select(id1, id2)
+      ids %<>% dplyr::select(id1, id2)
     }
     
     if (drop_lower) {
-      sim_df %<>% filter(id1 > id2)
+      sim_df %<>% dplyr::filter(id1 > id2)
     }
     
     sim_df %<>%
-      inner_join(ids, by = c("id1", "id2"))
+      dplyr::inner_join(ids, by = c("id1", "id2"))
     
     if (!is.null(annotation_cols)) {
       sim_df %<>%
@@ -400,7 +400,7 @@ sim_all_same_keep_some <-
     
     if (!is.null(annotation_cols)) {
       sim_df %<>%
-        select(all_of(sim_cols)) %>%
+        dplyr::select(all_of(sim_cols)) %>%
         sim_annotate(metadata,
                      annotation_cols,
                      index = "left")
