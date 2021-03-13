@@ -193,63 +193,6 @@ sim_annotate <-
 #'
 #' @param sim_df
 #' @param metadata
-#' @param all_same_cols
-#' @param annotation_cols
-#' @param include_group_tag
-#' @param drop_lower
-#'
-#' @return
-#' @export
-#'
-#' @examples
-sim_all_same <-
-  function(sim_df,
-           metadata,
-           all_same_cols,
-           annotation_cols = NULL,
-           include_group_tag = FALSE,
-           drop_lower = FALSE) {
-    metadata_i <-
-      metadata %>%
-      select(id, all_of(all_same_cols)) %>%
-      unite("all_same_col", all_of(all_same_cols), sep = ":")
-    
-    ids <-
-      inner_join(metadata_i,
-                 metadata_i,
-                 by = "all_same_col",
-                 suffix = c("1", "2"))
-    
-    if (include_group_tag) {
-      ids %<>% select(id1, id2, group = all_same_col)
-      
-    } else {
-      ids %<>% select(id1, id2)
-    }
-    
-    if (drop_lower) {
-      sim_df %<>% filter(id1 > id2)
-    }
-    
-    sim_df %<>%
-      inner_join(ids, by = c("id1", "id2"))
-    
-    if (!is.null(annotation_cols)) {
-      sim_df %<>%
-        sim_annotate(metadata,
-                     annotation_cols,
-                     index = "left")
-    }
-    
-    sim_df
-    
-  }
-
-
-#' Title
-#'
-#' @param sim_df
-#' @param metadata
 #' @param filter_keep
 #' @param filter_side
 #'
@@ -317,6 +260,61 @@ sim_drop <-
   }
 
 
+#' Title
+#'
+#' @param sim_df
+#' @param metadata
+#' @param all_same_cols
+#' @param annotation_cols
+#' @param include_group_tag
+#' @param drop_lower
+#'
+#' @return
+#' @export
+#'
+#' @examples
+sim_all_same <-
+  function(sim_df,
+           metadata,
+           all_same_cols,
+           annotation_cols = NULL,
+           include_group_tag = FALSE,
+           drop_lower = FALSE) {
+    metadata_i <-
+      metadata %>%
+      select(id, all_of(all_same_cols)) %>%
+      unite("all_same_col", all_of(all_same_cols), sep = ":")
+    
+    ids <-
+      inner_join(metadata_i,
+                 metadata_i,
+                 by = "all_same_col",
+                 suffix = c("1", "2"))
+    
+    if (include_group_tag) {
+      ids %<>% select(id1, id2, group = all_same_col)
+      
+    } else {
+      ids %<>% select(id1, id2)
+    }
+    
+    if (drop_lower) {
+      sim_df %<>% filter(id1 > id2)
+    }
+    
+    sim_df %<>%
+      inner_join(ids, by = c("id1", "id2"))
+    
+    if (!is.null(annotation_cols)) {
+      sim_df %<>%
+        sim_annotate(metadata,
+                     annotation_cols,
+                     index = "left")
+    }
+    
+    sim_df
+    
+  }
 
 #' Title
 #'
