@@ -77,6 +77,7 @@ drop_annotation <-
 #' @return data.frame of melted similarity matrix.
 #' 
 #' @importFrom magrittr %>%
+#' @importFrom magrittr %<>%
 #'
 #' @examples
 #' suppressMessages(suppressWarnings(library(magrittr)))
@@ -136,6 +137,7 @@ sim_calculate <-
 #' @return annotated melted similarity matrix of the same class as \code{sim_df}.
 #' 
 #' @importFrom magrittr %>%
+#' @importFrom magrittr %<>%
 #'
 #' @examples
 #' suppressMessages(suppressWarnings(library(magrittr)))
@@ -202,6 +204,7 @@ sim_annotate <-
 #' @return filtered \code{sim_df} with some rows kept and some rows dropped. No filters applied if both \code{filter_keep} and \code{filter_drop} are NULL.
 #' 
 #' @importFrom magrittr %>%
+#' @importFrom magrittr %<>%
 #'
 #' @examples
 #' suppressMessages(suppressWarnings(library(magrittr)))
@@ -279,6 +282,7 @@ sim_filter <-
 #' @return filtered \code{sim_df} where only pairs with the same values in \code{all_same_cols} columns are kept.
 #' 
 #' @importFrom magrittr %>%
+#' @importFrom magrittr %<>%
 #'
 #' @examples
 #' suppressMessages(suppressWarnings(library(magrittr)))
@@ -356,6 +360,7 @@ sim_all_same <-
 #' @return filtered \code{sim_df} where only pairs with the same values in \code{all_same_cols} columns are kept, with further filtering using \code{filter_keep_right}.
 #' 
 #' @importFrom magrittr %>%
+#' @importFrom magrittr %<>%
 #'
 #' @examples
 #' suppressMessages(suppressWarnings(library(magrittr)))
@@ -428,6 +433,7 @@ sim_all_same_keep_some <-
 #' @return filtered \code{sim_df} keeping only pairs that have same values in all columns of \code{all_same_cols_non_rep}, different values in all columns \code{all_different_cols_non_rep}, and different values in at least one column of \code{any_different_cols_non_rep}, with further filtering using \code{filter_drop_left} and \code{filter_drop_right}.
 #' 
 #' @importFrom magrittr %>%
+#' @importFrom magrittr %<>%
 #'
 #' @examples
 #' suppressMessages(suppressWarnings(library(magrittr)))
