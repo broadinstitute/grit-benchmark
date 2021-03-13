@@ -5,7 +5,7 @@ sim_cols <- c("id1", "id2", "sim")
 #' \code{get_annotation} gets row annotations.
 #'
 #' @param population tbl with annotations (a.k.a. metadata) and observation variables.
-#' @param annotation_prefix optional character string specifying  prefix for annotation columns.
+#' @param annotation_prefix optional character string specifying prefix for annotation columns (e.g. \code{"Metadata_"} (default)).
 #'
 #' @return row annotations of the same class as \code{population}
 #' @export
@@ -40,7 +40,7 @@ get_annotation <-
 #' \code{drop_annotation} drops row annotations.
 #'
 #' @param population tbl with annotations (a.k.a. metadata) and observation variables.
-#' @param annotation_prefix optional character string specifying prefix for annotation columns.
+#' @param annotation_prefix optional character string specifying prefix for annotation columns (e.g. \code{"Metadata_"} (default)).
 #'
 #' @return data with all columns except row annotations of the same class as \code{population}
 #' @export
@@ -887,14 +887,17 @@ sim_munge <-
   }
 
 
-#' Title
+#' Compute metrics.
+#' 
+#' \code{sim_metrics} computes metrics.
 #'
-#' @param grouped_sim
-#' @param sim_type
-#' @param calculate_grouped
-#' @param annotation_prefix
+#' @param munged_sim output of \code{sim_munged}.
+#' @param sim_type character string specifying the background distributions for computing scaled metrics. This must be one of the strings \code{"non_rep"} or \code{"ref"}. 
+#' @param calculate_grouped optional boolean specifying whether to include grouped metrics.
+#' @param annotation_prefix optional character string specifying prefix for annotation columns (e.g. \code{"Metadata_"} (default)).
 #'
-#' @return
+#' @return list of metrics.
+#' 
 #' @export
 #'
 #' @examples
