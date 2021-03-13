@@ -81,7 +81,7 @@ drop_annotation <-
 #' @examples
 #' suppressMessages(suppressWarnings(library(magrittr)))
 #' population <- tibble::tibble(
-#'   Metadata_group = sample(c('a', 'b'), 4, replace = TRUE),
+#'   Metadata_group = sample(c("a", "b"), 4, replace = TRUE),
 #'   x = rnorm(4),
 #'   y = x +rnorm(4) / 100,
 #'   z = y + rnorm(4) / 1000
@@ -126,7 +126,7 @@ sim_calculate <-
 
 #' Annotate melted similarity matrix.
 #' 
-#' \code{sim_annotate} annotate a melted similarity matrix.
+#' \code{sim_annotate} annotates a melted similarity matrix.
 #'
 #' @param sim_df tbl with melted similarity matrix. 
 #' @param metadata tbl with metadata annotations with which to annotate the similarity matrix.
@@ -140,8 +140,8 @@ sim_calculate <-
 #' @examples
 #' suppressMessages(suppressWarnings(library(magrittr)))
 #' population <- tibble::tibble(
-#'   Metadata_group = sample(c('a', 'b'), 4, replace = TRUE),
-#'   Metadata_type = sample(c('x', 'y'), 4, replace = TRUE),
+#'   Metadata_group = sample(c("a", "b"), 4, replace = TRUE),
+#'   Metadata_type = sample(c("x", "y"), 4, replace = TRUE),
 #'   x = rnorm(4),
 #'   y = x +rnorm(4) / 100,
 #'   z = y + rnorm(4) / 1000
@@ -189,76 +189,81 @@ sim_annotate <-
     
   }
 
-#' Title
+#' Filter rows of the melted similarity matrix.
+#' 
+#' \code{sim_filter} filters rows of the melted similarity matrix.
 #'
-#' @param sim_df
-#' @param metadata
-#' @param filter_keep
-#' @param filter_side
+#' @param sim_df tbl with melted similarity matrix. 
+#' @param metadata tbl with metadata annotations for the similarity matrix.
+#' @param filter_keep optional tbl of metadata specifying which rows to keep.
+#' @param filter_drop optional tbl of metadata specifying which rows to drop.
+#' @param filter_side character string specifying which index to filter on. This must be one of the strings \code{"left"} or \code{"right"}.
 #'
-#' @return
-#' @export
+#' @return filtered \code{sim_df} with some rows kept and some rows dropped. No filters applied if both \code{filter_keep} and \code{filter_drop} are NULL.
+#' 
+#' @importFrom magrittr %>%
 #'
 #' @examples
-sim_keep <-
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = sample(c("a", "b"), 4, replace = TRUE),
+#'   Metadata_type = sample(c("x", "y"), 4, replace = TRUE),
+#'   x = rnorm(4),
+#'   y = x +rnorm(4) / 100,
+#'   z = y + rnorm(4) / 1000
+#' )
+#' metadata <- cytoeval::get_annotation(population)
+#' annotation_cols <- c("Metadata_group", "Metadata_type")
+#' sim_df <- cytoeval::sim_calculate(population, method = "pearson")
+#' sim_df <- cytoeval::sim_annotate(sim_df, metadata, annotation_cols)
+#' filter_keep <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
+#' filter_drop <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
+#' cytoeval::sim_filter(sim_df, metadata, filter_keep, "left")
+#' cytoeval::sim_filter(sim_df, metadata, filter_drop, "left")
+#' @export
+sim_filter <-
   function(sim_df,
            metadata,
-           filter_keep,
-           filter_side) {
+           filter_keep = NULL,
+           filter_drop = NULL,
+           filter_side = NULL) {
     stopifnot(filter_side %in% c("left", "right"))
-    
-    filter_ids <-
-      metadata %>%
-      inner_join(filter_keep, by = colnames(filter_keep)) %>%
-      select(id)
-    
+
+    # if there's nothing to keep and nothing to drop, then assume there is 
+    # nothing to drop
+    if (is.null(filter_drop) & is.null(filter_keep)) {
+      return(sim_df)
+    }
+
     join_str <- c("id")
     
     # join_str will be either c("id1" = "id") or c("id2" = "id")
     names(join_str) <-
       paste0("id", ifelse(filter_side == "left", 1, 2))
     
-    sim_df %<>%
-      inner_join(filter_ids, by = join_str)
-    
-    sim_df
-    
-  }
-
-
-#' Title
-#'
-#' @param sim_df
-#' @param metadata
-#' @param filter_drop
-#' @param filter_side
-#'
-#' @return
-#' @export
-#'
-#' @examples
-sim_drop <-
-  function(sim_df,
-           metadata,
-           filter_drop,
-           filter_side) {
-    stopifnot(filter_side %in% c("left", "right"))
-    
-    if (is.null(filter_drop)) {
-      return(sim_df)
+    if (!is.null(filter_keep)) {
+      filter_ids <-
+        metadata %>%
+        dplyr::inner_join(filter_keep, by = colnames(filter_keep)) %>%
+        dplyr::select(id)
+      
+      sim_df %<>%
+        dplyr::inner_join(filter_ids, by = join_str)
     }
     
-    sim_df %<>%
-      select(all_of(sim_cols)) %>%
-      sim_annotate(metadata,
-                   colnames(filter_drop),
-                   index = filter_side) %>%
-      anti_join(filter_drop, by = colnames(filter_drop)) %>%
-      select(all_of(sim_cols))
+    if (!is.null(filter_drop)) {
+      filter_ids <-
+        metadata %>%
+        dplyr::inner_join(filter_drop, by = colnames(filter_drop)) %>%
+        dplyr::select(id)
+      
+      sim_df %<>%
+        dplyr::anti_join(filter_ids, by = join_str)
+    } 
     
     sim_df
+    
   }
-
 
 #' Title
 #'
@@ -340,17 +345,17 @@ sim_all_same_keep_some <-
     sim_df %<>%
       sim_all_same(metadata,
                    all_same_cols) %>%
-      sim_keep(metadata,
-               filter_keep_right,
-               "right")
+      sim_filter(metadata,
+                 filter_keep = filter_keep_right,
+                 filter_side = "right")
     
     if (drop_reference) {
       filter_drop_left <- filter_keep_right
       
       sim_df %<>%
-        sim_drop(metadata,
-                 filter_drop_left,
-                 "left")
+        sim_filter(metadata,
+                   filter_drop = filter_drop_left,
+                   filter_side = "left")
     }
     
     if (!is.null(annotation_cols)) {
@@ -533,8 +538,8 @@ sim_munge <-
     
     if (!is.null(drop_group)) {
       sim_df %<>%
-        sim_drop(metadata, drop_group, "left") %>%
-        sim_drop(metadata, drop_group, "right")
+        sim_filter(metadata, filter_drop = drop_group, filter_side = "left") %>%
+        sim_filter(metadata, filter_drop = drop_group, filter_side = "right")
       
     }
     
@@ -591,8 +596,8 @@ sim_munge <-
     
     rep <-
       sim_df %>%
-      sim_drop(metadata, reference, "left") %>%
-      sim_drop(metadata, reference, "right") %>%
+      sim_filter(metadata, filter_drop = reference, filter_side = "left") %>%
+      sim_filter(metadata, filter_drop = reference, filter_side = "right") %>%
       sim_all_same(metadata,
                    all_same_cols_rep,
                    annotation_cols,
@@ -613,12 +618,12 @@ sim_munge <-
     if (fetch_rep_ref) {
       rep_ref <-
         sim_df %>%
-        sim_keep(metadata,
-                 filter_keep = reference,
-                 "left") %>%
-        sim_keep(metadata,
-                 filter_keep = reference,
-                 "right") %>%
+        sim_filter(metadata,
+                   filter_keep = reference,
+                   filter_side = "left") %>%
+        sim_filter(metadata,
+                   filter_keep = reference,
+                   filter_side = "right") %>%
         sim_all_same(
           metadata,
           all_same_cols = all_same_cols_rep_ref,
