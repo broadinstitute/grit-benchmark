@@ -162,7 +162,7 @@ sim_annotate <-
       metadata %>%
       select(id, any_of(annotation_cols))
     
-    sim_df %<>% select(all_of(sim_cols))
+    sim_df %<>% dplyr::select(dplyr::all_of(sim_cols))
     
     if (index == "left") {
       sim_df %<>%
@@ -312,8 +312,8 @@ sim_all_same <-
            drop_lower = FALSE) {
     metadata_i <-
       metadata %>%
-      dplyr::select(id, all_of(all_same_cols)) %>%
-      tidyr::unite("all_same_col", all_of(all_same_cols), sep = ":")
+      dplyr::select(id, dplyr::all_of(all_same_cols)) %>%
+      tidyr::unite("all_same_col", dplyr::all_of(all_same_cols), sep = ":")
     
     ids <-
       dplyr::inner_join(metadata_i,
@@ -407,7 +407,7 @@ sim_all_same_keep_some <-
     
     if (!is.null(annotation_cols)) {
       sim_df %<>%
-        dplyr::select(all_of(sim_cols)) %>%
+        dplyr::select(dplyr::all_of(sim_cols)) %>%
         sim_annotate(metadata,
                      annotation_cols,
                      index = "left")
@@ -539,8 +539,8 @@ sim_some_different_drop_some <-
       purrr::map_df(all_different_cols,
                     function(all_different_col) {
                       dplyr::inner_join(
-                        metadata_i %>% dplyr::select(id, all_of(all_different_col)),
-                        metadata_i %>% dplyr::select(id, all_of(all_different_col)),
+                        metadata_i %>% dplyr::select(id, dplyr::all_of(all_different_col)),
+                        metadata_i %>% dplyr::select(id, dplyr::all_of(all_different_col)),
                         by = all_different_col,
                         suffix = c("1", "2")
                       ) %>%
@@ -851,11 +851,11 @@ sim_metrics <- function(munged_sim,
              identifier = NULL) {
       sim_stats <-
         munged_sim %>%
-        filter(type == sim_type) %>%
-        group_by(across(all_of(summary_cols))) %>%
-        summarise(across(all_of("sim"), list(mean = mean, sd = sd)),
-                  .groups = "keep") %>%
-        ungroup()
+        dplyr::filter(type == sim_type) %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(summary_cols))) %>%
+        dplyr::summarise(dplyr::across(dplyr::all_of("sim"), list(mean = mean, sd = sd)),
+                         .groups = "keep") %>%
+        dplyr::ungroup()
       
       # scale using mean and s.d. of the `sim_type` distribution
       
@@ -864,33 +864,35 @@ sim_metrics <- function(munged_sim,
       
       sim_norm <-
         munged_sim %>%
-        filter(type == sim_type_replication) %>%
-        inner_join(sim_stats, by = join_cols) %>%
-        mutate(sim_scaled = (sim - sim_mean) / sim_sd)
+        dplyr::filter(type == sim_type_replication) %>%
+        dplyr::inner_join(sim_stats, by = join_cols) %>%
+        dplyr::mutate(sim_scaled = (sim - sim_mean) / sim_sd)
       
       # get a summary per group
       sim_norm_agg <-
         sim_norm %>%
-        group_by(across(all_of(summary_cols))) %>%
-        summarise(across(all_of(c(
+        dplyr::group_by(dplyr::across(dplyr::all_of(summary_cols))) %>%
+        dplyr::summarise(dplyr::across(dplyr::all_of(c(
           "sim_scaled", "sim"
         )),
         list(mean = mean, median = median)),
         .groups = "keep") %>%
-        rename_with( ~ paste(., sim_type, sep = "_"),
-                     starts_with("sim_scaled")) %>%
-        ungroup()
+        dplyr::rename_with(~ paste(., sim_type, sep = "_"),
+                           dplyr::starts_with("sim_scaled")) %>%
+        dplyr::ungroup()
       
       sim_norm_agg %<>%
-        inner_join(sim_stats %>%
-                     rename_with(~ paste(., "stat", sim_type, sep = "_"),
-                                 starts_with("sim")),
-                   by = join_cols)
+        dplyr::inner_join(sim_stats %>%
+                            dplyr::rename_with(
+                              ~ paste(., "stat", sim_type, sep = "_"),
+                              dplyr::starts_with("sim")
+                            ),
+                          by = join_cols)
       
       if (!is.null(identifier)) {
         sim_norm_agg %<>%
-          rename_with(~ paste(., identifier, sep = "_"),
-                      starts_with("sim"))
+          dplyr::rename_with( ~ paste(., identifier, sep = "_"),
+                              dplyr::starts_with("sim"))
       }
       
       sim_norm_agg
@@ -904,17 +906,17 @@ sim_metrics <- function(munged_sim,
   
   sim_norm_agg_agg <-
     sim_norm_agg %>%
-    ungroup() %>%
-    group_by(across(all_of(c(rep_cols)))) %>%
-    summarise(across(-all_of("id1"),
-                     list(mean = mean, median = median)),
-              .groups = "keep")
+    dplyr::ungroup() %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(c(rep_cols)))) %>%
+    dplyr::summarise(dplyr::across(-dplyr::all_of("id1"),
+                                   list(mean = mean, median = median)),
+                     .groups = "keep")
   
   # append identified ("_i" for "individual")
   
   sim_norm_agg_agg %<>%
-    rename_with( ~ paste(., "i", sep = "_"),
-                 starts_with("sim"))
+    dplyr::rename_with(~ paste(., "i", sep = "_"),
+                       dplyr::starts_with("sim"))
   
   result <-
     list(per_row = sim_norm_agg,
