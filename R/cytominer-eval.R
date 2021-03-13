@@ -265,19 +265,39 @@ sim_filter <-
     
   }
 
-#' Title
+#' Filter rows of the melted similarity matrix to keep pairs with the same values in specific columns.
+#' 
+#' \code{sim_all_same} Filters melted similarity matrix to keep pairs with the same values in specific columns.
 #'
-#' @param sim_df
-#' @param metadata
-#' @param all_same_cols
-#' @param annotation_cols
-#' @param include_group_tag
-#' @param drop_lower
+#' @param sim_df tbl with melted similarity matrix. 
+#' @param metadata tbl with metadata annotations for the similarity matrix.
+#' @param all_same_cols character string specifying columns.
+#' @param annotation_cols optional character vector specifying which columns from \code{metadata} to annotate the left index of the filtered \code{sim_df} with.
+#' @param include_group_tag optional boolean specifying whether to include an identifier for the pairs using the values in the \code{all_same_cols} columns.
+#' @param drop_lower optional boolean specifying whether to drop the pairs where the first index is smaller than the second index. This is equivalent to dropping the lower triangular of  \code{sim_df}.
 #'
-#' @return
-#' @export
+#' @return filtered \code{sim_df} where only pairs with the same values in \code{all_same_cols} columns are kept.
+#' 
+#' @importFrom magrittr %>%
 #'
 #' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = sample(c("a", "b"), 4, replace = TRUE),
+#'   Metadata_type = sample(c("x", "y"), 4, replace = TRUE),
+#'   x = rnorm(4),
+#'   y = x +rnorm(4) / 100,
+#'   z = y + rnorm(4) / 1000
+#' )
+#' metadata <- cytoeval::get_annotation(population)
+#' annotation_cols <- c("Metadata_group", "Metadata_type")
+#' sim_df <- cytoeval::sim_calculate(population, method = "pearson")
+#' sim_df <- cytoeval::sim_annotate(sim_df, metadata, annotation_cols)
+#' all_same_cols <- c("Metadata_group")
+#' include_group_tag <- TRUE
+#' drop_lower <- FALSE
+#' cytoeval::sim_all_same(sim_df, metadata, all_same_cols, annotation_cols, include_group_tag, drop_lower)
+#' @export
 sim_all_same <-
   function(sim_df,
            metadata,
