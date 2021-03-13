@@ -1,54 +1,99 @@
 sim_cols <- c("id1", "id2", "sim")
 
-#' Title
+#' Get row annotations.
+#' 
+#' \code{get_annotation} gets row annotations.
 #'
-#' @param population
-#' @param annotation_prefix
+#' @param population tbl with annotations (a.k.a. metadata) and observation variables.
+#' @param annotation_prefix optional character string specifying  prefix for annotation columns.
 #'
-#' @return
+#' @return row annotations of the same class as \code{population}
 #' @export
+#' 
+#' @importFrom magrittr %>%
+#'
 #'
 #' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = c(
+#'     "control", "control", "control", "control",
+#'     "experiment", "experiment", "experiment", "experiment"
+#'   ),
+#'   Metadata_batch = c("a", "a", "b", "b", "a", "a", "b", "b"),
+#'   AreaShape_Area = c(10, 12, 15, 16, 8, 8, 7, 7)
+#' )
+#' cytoeval::get_annotation(population, annotation_prefix = "Metadata_")
+#' @export
 get_annotation <-
   function(population,
            annotation_prefix = "Metadata_") {
-    profiles %>%
-      select(matches(annotation_prefix)) %>%
-      mutate(id = seq(nrow(profiles))) %>%
-      select(id, everything())
+    population %>%
+      dplyr::select(dplyr::matches(annotation_prefix)) %>%
+      dplyr::mutate(id = seq(nrow(population))) %>%
+      dplyr::select(id, dplyr::everything())
   }
 
 
-#' Title
+#' Drop row annotations.
+#' 
+#' \code{drop_annotation} drops row annotations.
 #'
-#' @param population
-#' @param annotation_prefix
+#' @param population tbl with annotations (a.k.a. metadata) and observation variables.
+#' @param annotation_prefix optional character string specifying prefix for annotation columns.
 #'
-#' @return
+#' @return data with all columns except row annotations of the same class as \code{population}
 #' @export
+#' 
+#' @importFrom magrittr %>%
 #'
 #' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = c(
+#'     "control", "control", "control", "control",
+#'     "experiment", "experiment", "experiment", "experiment"
+#'   ),
+#'   Metadata_batch = c("a", "a", "b", "b", "a", "a", "b", "b"),
+#'   AreaShape_Area = c(10, 12, 15, 16, 8, 8, 7, 7)
+#' )
+#' cytoeval::drop_annotation(population, annotation_prefix = "Metadata_")
+#' @export 
 drop_annotation <-
   function(population,
            annotation_prefix = "Metadata_") {
     population %>%
-      select(-matches(annotation_prefix))
+      dplyr::select(-dplyr::matches(annotation_prefix))
   }
 
-# Alias
-get_matrix <- drop_annotation
 
-#' Title
+#' Annotate melted similarity matrix.
+#' 
+#' \code{sim_annotate} annotate a melted similarity matrix.
 #'
-#' @param sim_df
-#' @param metadata
-#' @param annotation_cols
-#' @param index
+#' @param sim_df tbl with melted similarity matrix. 
+#' @param metadata tbl with metadata annotations with which to annotate the similarity matrix.
+#' @param annotation_cols character vector specifying annotation columns.
+#' @param index optional character string specifying whether to annotate left index, right index, or both.  This must be one of the strings \code{"both"} (default), \code{"left"}, \code{"right"}.
 #'
-#' @return
-#' @export
+#' @return annotated melted similarity matrix of the same class as \code{sim_df}.
+#' 
+#' @importFrom magrittr %>%
 #'
 #' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = sample(c('a', 'b'), 4, replace = TRUE),
+#'   Metadata_type = sample(c('x', 'y'), 4, replace = TRUE),
+#'   x = rnorm(4),
+#'   y = x +rnorm(4) / 100,
+#'   z = y + rnorm(4) / 1000
+#' )
+#' metadata <- cytoeval::get_annotation(population)
+#' annotation_cols <- c("Metadata_group")
+#' sim_df <- cytoeval::sim_calculate(population, method = "pearson")
+#' cytoeval::sim_annotate(sim_df, metadata, annotation_cols)
+#' @export
 sim_annotate <-
   function(sim_df,
            metadata,
@@ -87,16 +132,28 @@ sim_annotate <-
     
   }
 
-#' Title
+#' Calculate melted similarity matrix.
+#' 
+#' \code{sim_calculate} calculates a melted similarity matrix.
 #'
-#' @param population
-#' @param annotation_prefix
-#' @param method
+#' @param population tbl with annotations (a.k.a. metadata) and observation variables.
+#' @param annotation_prefix optional character string specifying prefix for annotation columns.
+#' @param method optional character string specifying method for \code{stats::cor} to calculate similarity.  This must be one of the strings \code{"pearson"} (default), \code{"kendall"}, \code{"spearman"}.
 #'
-#' @return
-#' @export
+#' @return data.frame of melted similarity matrix.
+#' 
+#' @importFrom magrittr %>%
 #'
 #' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = sample(c('a', 'b'), 4, replace = TRUE),
+#'   x = rnorm(4),
+#'   y = x +rnorm(4) / 100,
+#'   z = y + rnorm(4) / 1000
+#' )
+#' cytoeval::sim_calculate(population, method = "pearson")
+#' @export 
 sim_calculate <-
   function(population,
            annotation_prefix = "Metadata_",
@@ -104,27 +161,27 @@ sim_calculate <-
     # get data matrix
     data_matrix <-
       population %>%
-      select(-matches(annotation_prefix))
+      dplyr::select(-dplyr::matches(annotation_prefix))
     
     # get metadata
     metadata <-
       population %>%
-      select(matches(annotation_prefix)) %>%
-      rowid_to_column(var = "id")
+      dplyr::select(dplyr::matches(annotation_prefix)) %>%
+      tibble::rowid_to_column(var = "id")
     
     # measure similarities between treatments
     stopifnot(method %in% c("pearson", "kendall", "spearman"))
     
-    sim_df <- cor(t(data_matrix), method = method)
+    sim_df <- stats::cor(t(data_matrix), method = method)
     
     colnames(sim_df) <- seq(1, ncol(sim_df))
     
     sim_df %<>%
-      as_tibble() %>%
-      rowid_to_column(var = "id1") %>%
-      gather(id2, sim, -id1) %>%
-      mutate(id2 = as.integer(id2)) %>%
-      filter(id1 != id2)
+      tibble::as_tibble() %>%
+      tibble::rowid_to_column(var = "id1") %>%
+      tidyr::pivot_longer(-id1, names_to = "id2", values_to = "sim") %>%
+      dplyr::mutate(id2 = as.integer(id2)) %>%
+      dplyr::filter(id1 != id2)
     
     # do this instead of adding a column because adding a fourth, character
     # column (<16 chars) increases the size of the data.frame by ~50%
