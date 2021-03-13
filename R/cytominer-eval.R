@@ -66,6 +66,63 @@ drop_annotation <-
       dplyr::select(-dplyr::matches(annotation_prefix))
   }
 
+#' Calculate melted similarity matrix.
+#' 
+#' \code{sim_calculate} calculates a melted similarity matrix.
+#'
+#' @param population tbl with annotations (a.k.a. metadata) and observation variables.
+#' @param annotation_prefix optional character string specifying prefix for annotation columns.
+#' @param method optional character string specifying method for \code{stats::cor} to calculate similarity.  This must be one of the strings \code{"pearson"} (default), \code{"kendall"}, \code{"spearman"}.
+#'
+#' @return data.frame of melted similarity matrix.
+#' 
+#' @importFrom magrittr %>%
+#'
+#' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = sample(c('a', 'b'), 4, replace = TRUE),
+#'   x = rnorm(4),
+#'   y = x +rnorm(4) / 100,
+#'   z = y + rnorm(4) / 1000
+#' )
+#' cytoeval::sim_calculate(population, method = "pearson")
+#' @export 
+sim_calculate <-
+  function(population,
+           annotation_prefix = "Metadata_",
+           method = "pearson") {
+    # get data matrix
+    data_matrix <-
+      population %>%
+      dplyr::select(-dplyr::matches(annotation_prefix))
+    
+    # get metadata
+    metadata <-
+      population %>%
+      dplyr::select(dplyr::matches(annotation_prefix)) %>%
+      tibble::rowid_to_column(var = "id")
+    
+    # measure similarities between treatments
+    stopifnot(method %in% c("pearson", "kendall", "spearman"))
+    
+    sim_df <- stats::cor(t(data_matrix), method = method)
+    
+    colnames(sim_df) <- seq(1, ncol(sim_df))
+    
+    sim_df %<>%
+      tibble::as_tibble() %>%
+      tibble::rowid_to_column(var = "id1") %>%
+      tidyr::pivot_longer(-id1, names_to = "id2", values_to = "sim") %>%
+      dplyr::mutate(id2 = as.integer(id2)) %>%
+      dplyr::filter(id1 != id2)
+    
+    # do this instead of adding a column because adding a fourth, character
+    # column (<16 chars) increases the size of the data.frame by ~50%
+    attr(sim_df, "method") <- method
+    
+    sim_df
+  }
 
 #' Annotate melted similarity matrix.
 #' 
@@ -130,64 +187,6 @@ sim_annotate <-
     
     sim_df
     
-  }
-
-#' Calculate melted similarity matrix.
-#' 
-#' \code{sim_calculate} calculates a melted similarity matrix.
-#'
-#' @param population tbl with annotations (a.k.a. metadata) and observation variables.
-#' @param annotation_prefix optional character string specifying prefix for annotation columns.
-#' @param method optional character string specifying method for \code{stats::cor} to calculate similarity.  This must be one of the strings \code{"pearson"} (default), \code{"kendall"}, \code{"spearman"}.
-#'
-#' @return data.frame of melted similarity matrix.
-#' 
-#' @importFrom magrittr %>%
-#'
-#' @examples
-#' suppressMessages(suppressWarnings(library(magrittr)))
-#' population <- tibble::tibble(
-#'   Metadata_group = sample(c('a', 'b'), 4, replace = TRUE),
-#'   x = rnorm(4),
-#'   y = x +rnorm(4) / 100,
-#'   z = y + rnorm(4) / 1000
-#' )
-#' cytoeval::sim_calculate(population, method = "pearson")
-#' @export 
-sim_calculate <-
-  function(population,
-           annotation_prefix = "Metadata_",
-           method = "pearson") {
-    # get data matrix
-    data_matrix <-
-      population %>%
-      dplyr::select(-dplyr::matches(annotation_prefix))
-    
-    # get metadata
-    metadata <-
-      population %>%
-      dplyr::select(dplyr::matches(annotation_prefix)) %>%
-      tibble::rowid_to_column(var = "id")
-    
-    # measure similarities between treatments
-    stopifnot(method %in% c("pearson", "kendall", "spearman"))
-    
-    sim_df <- stats::cor(t(data_matrix), method = method)
-    
-    colnames(sim_df) <- seq(1, ncol(sim_df))
-    
-    sim_df %<>%
-      tibble::as_tibble() %>%
-      tibble::rowid_to_column(var = "id1") %>%
-      tidyr::pivot_longer(-id1, names_to = "id2", values_to = "sim") %>%
-      dplyr::mutate(id2 = as.integer(id2)) %>%
-      dplyr::filter(id1 != id2)
-    
-    # do this instead of adding a column because adding a fourth, character
-    # column (<16 chars) increases the size of the data.frame by ~50%
-    attr(sim_df, "method") <- method
-    
-    sim_df
   }
 
 #' Title
