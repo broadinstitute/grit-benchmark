@@ -877,20 +877,20 @@ sim_metrics <- function(munged_sim,
         )),
         list(mean = mean, median = median)),
         .groups = "keep") %>%
-        rename_with(~ paste(., sim_type, sep = "_"),
-                    starts_with("sim_scaled")) %>%
+        rename_with( ~ paste(., sim_type, sep = "_"),
+                     starts_with("sim_scaled")) %>%
         ungroup()
       
       sim_norm_agg %<>%
         inner_join(sim_stats %>%
-                     rename_with( ~ paste(., "stat", sim_type, sep = "_"),
-                                  starts_with("sim")),
+                     rename_with(~ paste(., "stat", sim_type, sep = "_"),
+                                 starts_with("sim")),
                    by = join_cols)
       
       if (!is.null(identifier)) {
         sim_norm_agg %<>%
-          rename_with( ~ paste(., identifier, sep = "_"),
-                       starts_with("sim"))
+          rename_with(~ paste(., identifier, sep = "_"),
+                      starts_with("sim"))
       }
       
       sim_norm_agg
@@ -913,8 +913,8 @@ sim_metrics <- function(munged_sim,
   # append identified ("_i" for "individual")
   
   sim_norm_agg_agg %<>%
-    rename_with(~ paste(., "i", sep = "_"),
-                starts_with("sim"))
+    rename_with( ~ paste(., "i", sep = "_"),
+                 starts_with("sim"))
   
   result <-
     list(per_row = sim_norm_agg,
