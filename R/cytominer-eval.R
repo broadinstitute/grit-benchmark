@@ -782,22 +782,22 @@ sim_munge <-
     
     if (fetch_rep_ref) {
       combined %<>%
-        bind_rows(rep_ref %>% mutate(type = "rep")) # same tag as ref
+        dplyr::bind_rows(rep_ref %>% dplyr::mutate(type = "rep")) # same tag as ref
     }
     
     if (fetch_non_rep) {
       combined %<>%
-        bind_rows(non_rep %>% mutate(type = "non_rep"))
+        dplyr::bind_rows(non_rep %>% dplyr::mutate(type = "non_rep"))
     }
     
     if (fetch_ref) {
       combined %<>%
-        bind_rows(ref %>% mutate(type = "ref"))
+        dplyr::bind_rows(ref %>% dplyr::mutate(type = "ref"))
     }
     
     if (fetch_rep_group) {
       combined %<>%
-        bind_rows(rep_group %>% mutate(type = "rep_group"))
+        dplyr::bind_rows(rep_group %>% dplyr::mutate(type = "rep_group"))
     }
     
     # add attributes
