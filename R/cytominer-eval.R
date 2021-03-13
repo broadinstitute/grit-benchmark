@@ -576,23 +576,88 @@ sim_some_different_drop_some <-
 #' Filter rows of the melted similarity matrix to create several sets of pairs.
 #'
 #' \code{sim_some_different_drop_some} Filters melted similarity matrix to create several sets of pairs.
+#' 
+#' 0. Filter out some rows
+#' 
+#' Filter out pairs that match \code{drop_group} in either right or left indices
+#' 
+#' 1. Similarity to reference
 #'
-#' @param sim_df
-#' @param metadata
-#' @param all_same_cols_rep
-#' @param annotation_cols
-#' @param all_same_cols_ref
-#' @param all_same_cols_rep_ref
-#' @param any_different_cols_non_rep
-#' @param all_same_cols_non_rep
-#' @param all_different_cols_non_rep
-#' @param any_different_cols_group
-#' @param all_same_cols_group
-#' @param reference
-#' @param drop_reference
-#' @param drop_group
+#' Fetch similarities between
+#' a. all rows (except, optionally those containing \code{reference})
+#' and
+#' b. all rows containing \code{reference}
+#' Do so only for those (a, b) pairs that
+#' - have *same* values in *all* columns of \code{all_same_cols_ref}
 #'
-#' @return
+#' 2. Similarity to replicates (no references)
+#'
+#' Fetch similarities between
+#' a. all rows except \code{reference} rows
+#' and
+#' b. all rows except \code{reference} rows (i.e. to each other)
+#'
+#' Do so for only those (a, b) pairs that
+#' - have *same* values in *all* columns of \code{all_same_cols_rep
+#'
+#' Keep, both, (a, b) and (b, a)
+#'
+#' 3. Similarity to replicates (only references)
+#'
+#' Fetch similarities between
+#' a. all rows containing \code{reference}
+#' and
+#' b. all rows containing \code{reference} (i.e. to each other)
+#'
+#' Do so for only those (a, b) pairs that
+#' - have *same* values in *all* columns of \code{all_same_cols_rep_ref}.
+#'
+#' Keep, both, (a, b) and (b, a)
+#'
+#' 4. Similarity to non-replicates
+#'
+#' Fetch similarities between
+#' a. all rows (except, optionally, \code{reference} rows)
+#' and
+#' b. all rows except \code{reference} rows
+#'
+#' Do so for only those (a, b) pairs that
+#' - have *same* values in *all* columns of \code{all_same_cols_non_rep}
+#' - have *different* values in *all* columns \code{all_different_cols_non_rep}
+#' - have *different* values in *at least one* column of \code{any_different_cols_non_rep}
+#'
+#' Keep, both, (a, b) and (b, a)
+#'
+#' 5. Similarity to group
+#'
+#' Fetch similarities between
+#' a. all rows (except, optionally, \code{reference} rows)
+#' and
+#' b. all rows (except, optionally, \code{reference} rows)
+#'
+#' Do so for only those (a, b) pairs that
+#' - have *same* values in *all* columns of \code{all_same_cols_group}
+#' - have *different* values in *at least one* column of \code{any_different_cols_group}
+#'
+#' Keep, both, (a, b) and (b, a)
+#' 
+#' 
+#' 
+#' @param sim_df tbl with melted similarity matrix.
+#' @param metadata tbl with metadata annotations for the similarity matrix.
+#' @param all_same_cols character vector specifying columns.
+#' @param annotation_cols character vector specifying which columns from \code{metadata} to annotate the left index of the filtered \code{sim_df} with.
+#' @param any_different_cols optional character vector specifying columns.
+#' @param all_same_cols_rep_ref optional character vector specifying columns.
+#' @param any_different_cols_non_rep optional character vector specifying columns.
+#' @param all_different_cols_non_rep optional character vector specifying columns.
+#' @param any_different_cols_group optional character vector specifying columns.
+#' @param all_same_cols_group optional character vector specifying columns.
+#' @param reference optional character string specifying reference.
+#' @param drop_reference optional boolean specifying whether to filter (drop) pairs using \code{reference} on the left index.
+#' @param drop_group optional tbl; rows that match on \code{drop_group} on the left or right index are dropped.
+#'
+#' @return filtered \code{sim_df} with sets of pairs.
 #' @export
 #'
 #' @examples
