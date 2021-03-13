@@ -1,7 +1,7 @@
 sim_cols <- c("id1", "id2", "sim")
 
 #' Get row annotations.
-#' 
+#'
 #' \code{get_annotation} gets row annotations.
 #'
 #' @param population tbl with annotations (a.k.a. metadata) and observation variables.
@@ -9,7 +9,7 @@ sim_cols <- c("id1", "id2", "sim")
 #'
 #' @return row annotations of the same class as \code{population}
 #' @export
-#' 
+#'
 #' @importFrom magrittr %>%
 #'
 #'
@@ -36,7 +36,7 @@ get_annotation <-
 
 
 #' Drop row annotations.
-#' 
+#'
 #' \code{drop_annotation} drops row annotations.
 #'
 #' @param population tbl with annotations (a.k.a. metadata) and observation variables.
@@ -44,7 +44,7 @@ get_annotation <-
 #'
 #' @return data with all columns except row annotations of the same class as \code{population}
 #' @export
-#' 
+#'
 #' @importFrom magrittr %>%
 #'
 #' @examples
@@ -58,7 +58,7 @@ get_annotation <-
 #'   AreaShape_Area = c(10, 12, 15, 16, 8, 8, 7, 7)
 #' )
 #' cytoeval::drop_annotation(population, annotation_prefix = "Metadata_")
-#' @export 
+#' @export
 drop_annotation <-
   function(population,
            annotation_prefix = "Metadata_") {
@@ -67,7 +67,7 @@ drop_annotation <-
   }
 
 #' Calculate melted similarity matrix.
-#' 
+#'
 #' \code{sim_calculate} calculates a melted similarity matrix.
 #'
 #' @param population tbl with annotations (a.k.a. metadata) and observation variables.
@@ -75,7 +75,7 @@ drop_annotation <-
 #' @param method optional character string specifying method for \code{stats::cor} to calculate similarity.  This must be one of the strings \code{"pearson"} (default), \code{"kendall"}, \code{"spearman"}.
 #'
 #' @return data.frame of melted similarity matrix.
-#' 
+#'
 #' @importFrom magrittr %>%
 #' @importFrom magrittr %<>%
 #'
@@ -88,7 +88,7 @@ drop_annotation <-
 #'   z = y + rnorm(4) / 1000
 #' )
 #' cytoeval::sim_calculate(population, method = "pearson")
-#' @export 
+#' @export
 sim_calculate <-
   function(population,
            annotation_prefix = "Metadata_",
@@ -126,16 +126,16 @@ sim_calculate <-
   }
 
 #' Annotate melted similarity matrix.
-#' 
+#'
 #' \code{sim_annotate} annotates a melted similarity matrix.
 #'
-#' @param sim_df tbl with melted similarity matrix. 
+#' @param sim_df tbl with melted similarity matrix.
 #' @param metadata tbl with metadata annotations with which to annotate the similarity matrix.
 #' @param annotation_cols character vector specifying annotation columns.
 #' @param index optional character string specifying whether to annotate left index, right index, or both.  This must be one of the strings \code{"both"} (default), \code{"left"}, \code{"right"}.
 #'
 #' @return annotated melted similarity matrix of the same class as \code{sim_df}.
-#' 
+#'
 #' @importFrom magrittr %>%
 #' @importFrom magrittr %<>%
 #'
@@ -192,17 +192,17 @@ sim_annotate <-
   }
 
 #' Filter rows of the melted similarity matrix.
-#' 
+#'
 #' \code{sim_filter} filters rows of the melted similarity matrix.
 #'
-#' @param sim_df tbl with melted similarity matrix. 
+#' @param sim_df tbl with melted similarity matrix.
 #' @param metadata tbl with metadata annotations for the similarity matrix.
 #' @param filter_keep optional tbl of metadata specifying which rows to keep.
 #' @param filter_drop optional tbl of metadata specifying which rows to drop.
 #' @param filter_side character string specifying which index to filter on. This must be one of the strings \code{"left"} or \code{"right"}.
 #'
 #' @return filtered \code{sim_df} with some rows kept and some rows dropped. No filters applied if both \code{filter_keep} and \code{filter_drop} are NULL.
-#' 
+#'
 #' @importFrom magrittr %>%
 #' @importFrom magrittr %<>%
 #'
@@ -231,13 +231,13 @@ sim_filter <-
            filter_drop = NULL,
            filter_side = NULL) {
     stopifnot(filter_side %in% c("left", "right"))
-
-    # if there's nothing to keep and nothing to drop, then assume there is 
+    
+    # if there's nothing to keep and nothing to drop, then assume there is
     # nothing to drop
     if (is.null(filter_drop) & is.null(filter_keep)) {
       return(sim_df)
     }
-
+    
     join_str <- c("id")
     
     # join_str will be either c("id1" = "id") or c("id2" = "id")
@@ -262,17 +262,17 @@ sim_filter <-
       
       sim_df %<>%
         dplyr::anti_join(filter_ids, by = join_str)
-    } 
+    }
     
     sim_df
     
   }
 
 #' Filter rows of the melted similarity matrix to keep pairs with the same values in specific columns.
-#' 
+#'
 #' \code{sim_all_same} Filters melted similarity matrix to keep pairs with the same values in specific columns.
 #'
-#' @param sim_df tbl with melted similarity matrix. 
+#' @param sim_df tbl with melted similarity matrix.
 #' @param metadata tbl with metadata annotations for the similarity matrix.
 #' @param all_same_cols character vector specifying columns.
 #' @param annotation_cols optional character vector specifying which columns from \code{metadata} to annotate the left index of the filtered \code{sim_df} with.
@@ -280,7 +280,7 @@ sim_filter <-
 #' @param drop_lower optional boolean specifying whether to drop the pairs where the first index is smaller than the second index. This is equivalent to dropping the lower triangular of  \code{sim_df}.
 #'
 #' @return filtered \code{sim_df} where only pairs with the same values in \code{all_same_cols} columns are kept.
-#' 
+#'
 #' @importFrom magrittr %>%
 #' @importFrom magrittr %<>%
 #'
@@ -317,9 +317,9 @@ sim_all_same <-
     
     ids <-
       dplyr::inner_join(metadata_i,
-                 metadata_i,
-                 by = "all_same_col",
-                 suffix = c("1", "2"))
+                        metadata_i,
+                        by = "all_same_col",
+                        suffix = c("1", "2"))
     
     if (include_group_tag) {
       ids %<>% dplyr::select(id1, id2, group = all_same_col)
@@ -347,10 +347,10 @@ sim_all_same <-
   }
 
 #' Filter rows of the melted similarity matrix to keep pairs with the same values in specific columns, and keep only some of these pairs.
-#' 
+#'
 #' \code{sim_all_same} Filters melted similarity matrix to keep pairs with the same values in specific columns, keeping only some of these pairs.
 #'
-#' @param sim_df tbl with melted similarity matrix. 
+#' @param sim_df tbl with melted similarity matrix.
 #' @param metadata tbl with metadata annotations for the similarity matrix.
 #' @param all_same_cols character vector specifying columns.
 #' @param filter_keep_right tbl of metadata specifying which rows to keep on the right index.
@@ -358,7 +358,7 @@ sim_all_same <-
 #' @param drop_reference optional boolean specifying whether to filter (drop) pairs using \code{filter_keep_right} on the left index.
 #'
 #' @return filtered \code{sim_df} where only pairs with the same values in \code{all_same_cols} columns are kept, with further filtering using \code{filter_keep_right}.
-#' 
+#'
 #' @importFrom magrittr %>%
 #' @importFrom magrittr %<>%
 #'
@@ -418,10 +418,10 @@ sim_all_same_keep_some <-
   }
 
 #' Filter rows of the melted similarity matrix to keep pairs with the same values in specific columns, and keep only some of these pairs.
-#' 
+#'
 #' \code{sim_some_different_drop_some} Filters melted similarity matrix to keep pairs with the same values in specific columns, keeping only some of these pairs.
 #'
-#' @param sim_df tbl with melted similarity matrix. 
+#' @param sim_df tbl with melted similarity matrix.
 #' @param metadata tbl with metadata annotations for the similarity matrix.
 #' @param any_different_cols character vector specifying columns.
 #' @param all_same_cols optional character vector specifying columns.
@@ -431,7 +431,7 @@ sim_all_same_keep_some <-
 #' @param annotation_cols optional character vector specifying which columns from \code{metadata} to annotate the left index of the filtered \code{sim_df} with.
 #'
 #' @return filtered \code{sim_df} keeping only pairs that have same values in all columns of \code{all_same_cols_non_rep}, different values in all columns \code{all_different_cols_non_rep}, and different values in at least one column of \code{any_different_cols_non_rep}, with further filtering using \code{filter_drop_left} and \code{filter_drop_right}.
-#' 
+#'
 #' @importFrom magrittr %>%
 #' @importFrom magrittr %<>%
 #'
@@ -455,7 +455,7 @@ sim_all_same_keep_some <-
 #' filter_drop_left <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
 #' filter_drop_right <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
 #' drop_reference <- FALSE
-#' cytoeval::sim_some_different_drop_some(sim_df, metadata, any_different_cols, all_same_cols, all_different_cols, filter_drop_left, filter_drop_right, annotation_cols) 
+#' cytoeval::sim_some_different_drop_some(sim_df, metadata, any_different_cols, all_same_cols, all_different_cols, filter_drop_left, filter_drop_right, annotation_cols)
 #' @export
 sim_some_different_drop_some <-
   function(sim_df,
@@ -472,15 +472,17 @@ sim_some_different_drop_some <-
     
     if (is.null(all_same_cols)) {
       # create a dummy column on which to join
-      metadata_i %<>% mutate(all_same_col = 0)
+      metadata_i %<>% dplyr::mutate(all_same_col = 0)
       all_same_cols <- "all_same_col"
     } else {
       # create a unified column on which to join
       metadata_i %<>%
-        unite("all_same_col",
-              all_of(all_same_cols),
-              sep = ":",
-              remove = FALSE)
+        tidyr::unite(
+          "all_same_col",
+          dplyr::all_of(all_same_cols),
+          sep = ":",
+          remove = FALSE
+        )
     }
     
     # ignore any_different_cols if superseded by all_different_cols
@@ -495,9 +497,9 @@ sim_some_different_drop_some <-
     # in all_different_cols
     if (!is.null(any_different_cols)) {
       metadata_i %<>%
-        unite(
+        tidyr::unite(
           "any_different_col",
-          all_of(any_different_cols),
+          dplyr::all_of(any_different_cols),
           sep = ":",
           remove = FALSE
         )
@@ -512,12 +514,12 @@ sim_some_different_drop_some <-
       function(filter_drop) {
         if (is.null(filter_drop)) {
           metadata_i %>%
-            select(id, all_same_col)
+            dplyr::select(id, all_same_col)
           
         } else {
           metadata_i %>%
-            anti_join(filter_drop, by = colnames(filter_drop)) %>%
-            select(id, all_same_col)
+            dplyr::anti_join(filter_drop, by = colnames(filter_drop)) %>%
+            dplyr::select(id, all_same_col)
           
         }
       }
@@ -527,37 +529,37 @@ sim_some_different_drop_some <-
     
     # list of rows that should be the same (weak constraint)
     ids_all_same <-
-      inner_join(metadata_left,
-                 metadata_right,
-                 by = "all_same_col",
-                 suffix = c("1", "2"))
+      dplyr::inner_join(metadata_left,
+                        metadata_right,
+                        by = "all_same_col",
+                        suffix = c("1", "2"))
     
     # list of rows that should be the different (strong constraint)
     ids_all_different <-
-      map_df(all_different_cols,
-             function(all_different_col) {
-               inner_join(
-                 metadata_i %>% select(id, all_of(all_different_col)),
-                 metadata_i %>% select(id, all_of(all_different_col)),
-                 by = all_different_col,
-                 suffix = c("1", "2")
-               ) %>%
-                 select(id1, id2)
-               
-             }) %>%
-      distinct()
+      purrr::map_df(all_different_cols,
+                    function(all_different_col) {
+                      dplyr::inner_join(
+                        metadata_i %>% dplyr::select(id, all_of(all_different_col)),
+                        metadata_i %>% dplyr::select(id, all_of(all_different_col)),
+                        by = all_different_col,
+                        suffix = c("1", "2")
+                      ) %>%
+                        dplyr::select(id1, id2)
+                      
+                    }) %>%
+      dplyr::distinct()
     
     # impose strong constraint on weak constraint
     ids <-
-      anti_join(ids_all_same,
-                ids_all_different,
-                by = c("id1", "id2"))
+      dplyr::anti_join(ids_all_same,
+                       ids_all_different,
+                       by = c("id1", "id2"))
     
-    ids %<>% select(id1, id2)
+    ids %<>% dplyr::select(id1, id2)
     
     # filter similarity matrix
     sim_df %<>%
-      inner_join(ids, by = c("id1", "id2"))
+      dplyr::inner_join(ids, by = c("id1", "id2"))
     
     # add annotations
     if (!is.null(annotation_cols)) {
@@ -571,20 +573,23 @@ sim_some_different_drop_some <-
     
   }
 
-
-
-#' Title
+#' Filter rows of the melted similarity matrix to create several sets of pairs.
+#'
+#' \code{sim_some_different_drop_some} Filters melted similarity matrix to create several sets of pairs.
 #'
 #' @param sim_df
 #' @param metadata
-#' @param reference
 #' @param all_same_cols_rep
-#' @param all_same_cols_rep_ref
+#' @param annotation_cols
 #' @param all_same_cols_ref
+#' @param all_same_cols_rep_ref
 #' @param any_different_cols_non_rep
 #' @param all_same_cols_non_rep
 #' @param all_different_cols_non_rep
-#' @param annotation_cols
+#' @param any_different_cols_group
+#' @param all_same_cols_group
+#' @param reference
+#' @param drop_reference
 #' @param drop_group
 #'
 #' @return
@@ -872,20 +877,20 @@ sim_metrics <- function(munged_sim,
         )),
         list(mean = mean, median = median)),
         .groups = "keep") %>%
-        rename_with( ~ paste(., sim_type, sep = "_"),
-                     starts_with("sim_scaled")) %>%
+        rename_with(~ paste(., sim_type, sep = "_"),
+                    starts_with("sim_scaled")) %>%
         ungroup()
       
       sim_norm_agg %<>%
         inner_join(sim_stats %>%
-                     rename_with(~ paste(., "stat", sim_type, sep = "_"),
-                                 starts_with("sim")),
+                     rename_with( ~ paste(., "stat", sim_type, sep = "_"),
+                                  starts_with("sim")),
                    by = join_cols)
       
       if (!is.null(identifier)) {
         sim_norm_agg %<>%
-          rename_with(~ paste(., identifier, sep = "_"),
-                      starts_with("sim"))
+          rename_with( ~ paste(., identifier, sep = "_"),
+                       starts_with("sim"))
       }
       
       sim_norm_agg
@@ -908,8 +913,8 @@ sim_metrics <- function(munged_sim,
   # append identified ("_i" for "individual")
   
   sim_norm_agg_agg %<>%
-    rename_with( ~ paste(., "i", sep = "_"),
-                 starts_with("sim"))
+    rename_with(~ paste(., "i", sep = "_"),
+                starts_with("sim"))
   
   result <-
     list(per_row = sim_norm_agg,
