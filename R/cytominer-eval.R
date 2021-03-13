@@ -271,7 +271,7 @@ sim_filter <-
 #'
 #' @param sim_df tbl with melted similarity matrix. 
 #' @param metadata tbl with metadata annotations for the similarity matrix.
-#' @param all_same_cols character string specifying columns.
+#' @param all_same_cols character vector specifying columns.
 #' @param annotation_cols optional character vector specifying which columns from \code{metadata} to annotate the left index of the filtered \code{sim_df} with.
 #' @param include_group_tag optional boolean specifying whether to include an identifier for the pairs using the values in the \code{all_same_cols} columns.
 #' @param drop_lower optional boolean specifying whether to drop the pairs where the first index is smaller than the second index. This is equivalent to dropping the lower triangular of  \code{sim_df}.
@@ -282,12 +282,13 @@ sim_filter <-
 #'
 #' @examples
 #' suppressMessages(suppressWarnings(library(magrittr)))
+#' n <- 5
 #' population <- tibble::tibble(
-#'   Metadata_group = sample(c("a", "b"), 4, replace = TRUE),
-#'   Metadata_type = sample(c("x", "y"), 4, replace = TRUE),
-#'   x = rnorm(4),
-#'   y = x +rnorm(4) / 100,
-#'   z = y + rnorm(4) / 1000
+#'   Metadata_group = sample(c("a", "b"), n, replace = TRUE),
+#'   Metadata_type = sample(c("x", "y"), n, replace = TRUE),
+#'   x = rnorm(n),
+#'   y = x + rnorm(n) / 100,
+#'   z = y + rnorm(n) / 1000
 #' )
 #' metadata <- cytoeval::get_annotation(population)
 #' annotation_cols <- c("Metadata_group", "Metadata_type")
@@ -347,7 +348,7 @@ sim_all_same <-
 #'
 #' @param sim_df tbl with melted similarity matrix. 
 #' @param metadata tbl with metadata annotations for the similarity matrix.
-#' @param all_same_cols character string specifying columns.
+#' @param all_same_cols character vector specifying columns.
 #' @param filter_keep_right tbl of metadata specifying which rows to keep on the right index.
 #' @param annotation_cols optional character vector specifying which columns from \code{metadata} to annotate the left index of the filtered \code{sim_df} with.
 #' @param drop_reference optional boolean specifying whether to filter (drop) pairs using \code{filter_keep_right} on the left index.
@@ -358,12 +359,13 @@ sim_all_same <-
 #'
 #' @examples
 #' suppressMessages(suppressWarnings(library(magrittr)))
+#' n <- 20
 #' population <- tibble::tibble(
-#'   Metadata_group = sample(c("a", "b"), 4, replace = TRUE),
-#'   Metadata_type = sample(c("x", "y"), 4, replace = TRUE),
-#'   x = rnorm(4),
-#'   y = x +rnorm(4) / 100,
-#'   z = y + rnorm(4) / 1000
+#'   Metadata_group = sample(c("a", "b"), n, replace = TRUE),
+#'   Metadata_type = sample(c("x", "y"), n, replace = TRUE),
+#'   x = rnorm(n),
+#'   y = x + rnorm(n) / 100,
+#'   z = y + rnorm(n) / 1000
 #' )
 #' metadata <- cytoeval::get_annotation(population)
 #' annotation_cols <- c("Metadata_group", "Metadata_type")
@@ -410,21 +412,45 @@ sim_all_same_keep_some <-
     sim_df
   }
 
-#' Title
+#' Filter rows of the melted similarity matrix to keep pairs with the same values in specific columns, and keep only some of these pairs.
+#' 
+#' \code{sim_some_different_drop_some} Filters melted similarity matrix to keep pairs with the same values in specific columns, keeping only some of these pairs.
 #'
-#' @param sim_df
-#' @param metadata
-#' @param any_different_cols
-#' @param all_same_cols
-#' @param all_different_cols
-#' @param filter_keep_left
-#' @param filter_keep_right
-#' @param annotation_cols
+#' @param sim_df tbl with melted similarity matrix. 
+#' @param metadata tbl with metadata annotations for the similarity matrix.
+#' @param any_different_cols character vector specifying columns.
+#' @param all_same_cols optional character vector specifying columns.
+#' @param all_different_cols optional character vector specifying columns.
+#' @param filter_drop_left tbl of metadata specifying which rows to drop on the left index.
+#' @param filter_drop_right tbl of metadata specifying which rows to drop on the right index.
+#' @param annotation_cols optional character vector specifying which columns from \code{metadata} to annotate the left index of the filtered \code{sim_df} with.
 #'
-#' @return
-#' @export
+#' @return filtered \code{sim_df} keeping only pairs that have same values in all columns of \code{all_same_cols_non_rep}, different values in all columns \code{all_different_cols_non_rep}, and different values in at least one column of \code{any_different_cols_non_rep}, with further filtering using \code{filter_drop_left} and \code{filter_drop_right}.
+#' 
+#' @importFrom magrittr %>%
 #'
 #' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = sample(c("a", "b"), 4, replace = TRUE),
+#'   Metadata_type1 = sample(c("x", "y"), 4, replace = TRUE),
+#'   Metadata_type2 = sample(c("p", "q"), 4, replace = TRUE),
+#'   x = rnorm(4),
+#'   y = x +rnorm(4) / 100,
+#'   z = y + rnorm(4) / 1000
+#' )
+#' metadata <- cytoeval::get_annotation(population)
+#' annotation_cols <- c("Metadata_group", "Metadata_type")
+#' sim_df <- cytoeval::sim_calculate(population, method = "pearson")
+#' sim_df <- cytoeval::sim_annotate(sim_df, metadata, annotation_cols)
+#' all_same_cols <- c("Metadata_group")
+#' all_different_cols <- c("Metadata_type1")
+#' any_different_cols <- c("Metadata_type2")
+#' filter_drop_left <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
+#' filter_drop_right <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
+#' drop_reference <- FALSE
+#' cytoeval::sim_some_different_drop_some(sim_df, metadata, any_different_cols, all_same_cols, all_different_cols, filter_drop_left, filter_drop_right, annotation_cols) 
+#' @export
 sim_some_different_drop_some <-
   function(sim_df,
            metadata,
