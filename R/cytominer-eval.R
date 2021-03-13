@@ -341,19 +341,39 @@ sim_all_same <-
     
   }
 
-#' Title
+#' Filter rows of the melted similarity matrix to keep pairs with the same values in specific columns, and keep only some of these pairs.
+#' 
+#' \code{sim_all_same} Filters melted similarity matrix to keep pairs with the same values in specific columns, keeping only some of these pairs.
 #'
-#' @param sim_df
-#' @param metadata
-#' @param all_same_cols
-#' @param filter_keep_right
-#' @param annotation_cols
-#' @param drop_reference
+#' @param sim_df tbl with melted similarity matrix. 
+#' @param metadata tbl with metadata annotations for the similarity matrix.
+#' @param all_same_cols character string specifying columns.
+#' @param filter_keep_right tbl of metadata specifying which rows to keep on the right index.
+#' @param annotation_cols optional character vector specifying which columns from \code{metadata} to annotate the left index of the filtered \code{sim_df} with.
+#' @param drop_reference optional boolean specifying whether to filter (drop) pairs using \code{filter_keep_right} on the left index.
 #'
-#' @return
-#' @export
+#' @return filtered \code{sim_df} where only pairs with the same values in \code{all_same_cols} columns are kept, with further filtering using \code{filter_keep_right}.
+#' 
+#' @importFrom magrittr %>%
 #'
 #' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = sample(c("a", "b"), 4, replace = TRUE),
+#'   Metadata_type = sample(c("x", "y"), 4, replace = TRUE),
+#'   x = rnorm(4),
+#'   y = x +rnorm(4) / 100,
+#'   z = y + rnorm(4) / 1000
+#' )
+#' metadata <- cytoeval::get_annotation(population)
+#' annotation_cols <- c("Metadata_group", "Metadata_type")
+#' sim_df <- cytoeval::sim_calculate(population, method = "pearson")
+#' sim_df <- cytoeval::sim_annotate(sim_df, metadata, annotation_cols)
+#' all_same_cols <- c("Metadata_group")
+#' filter_keep_right <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
+#' drop_reference <- FALSE
+#' cytoeval::sim_all_same_keep_some(sim_df, metadata, all_same_cols, filter_keep_right, annotation_cols, drop_reference)
+#' @export
 sim_all_same_keep_some <-
   function(sim_df,
            metadata,
