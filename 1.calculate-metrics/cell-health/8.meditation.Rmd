@@ -39,7 +39,7 @@ profiles <-
   select(-Metadata_WellCol, -Metadata_WellRow)
 
 metadata <- get_annotation(profiles)
-variables <- get_matrix(profiles)
+variables <- drop_annotation(profiles)
 ```
 
 
@@ -459,7 +459,6 @@ metrics <-
   select(all_of(all_same_cols_rep), everything())
 ```
 
-
 # Inspect metrics
 
 ```{r fig.width=6}
@@ -468,6 +467,17 @@ rename_cols <- function(coln) {
     str_remove_all("sim_")
 }
 ```
+
+
+```{r fig.width=6}
+per_set_all_metrics %>%
+  rename_with(rename_cols, starts_with("sim_")) %>%
+  select(-matches("Metadata"), -matches("stat")) %>%
+  select(matches("^scaled_"), matches("stat"), everything()) %>%
+  cor() %>%
+  corrplot::corrplot(tl.pos = "ld", type = "lower", order = "hclust", method = "ellipse")
+```
+
 
 ```{r fig.width=6}
 per_set_all_metrics %>%
