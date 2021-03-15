@@ -2,3 +2,5 @@
 .ipynb_checkpoints/
 .Rproj.user
 .Rhistory
+*.parquet
+rsconnect

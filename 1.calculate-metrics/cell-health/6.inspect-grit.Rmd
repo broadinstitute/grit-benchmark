@@ -109,8 +109,8 @@ drop_group <-
 
 if (!is.null(drop_group)) {
   sim_df %<>%
-    sim_drop(metadata, drop_group, "left") %>%
-    sim_drop(metadata, drop_group, "right")
+    sim_filter(metadata, filter_drop = drop_group, filter_side = "left") %>%
+    sim_filter(metadata, filter_drop = drop_group, filter_side = "right")
 }
 ```
 
@@ -209,8 +209,8 @@ all_same_cols_rep <-
 
 rep <-
   sim_df %>%
-  sim_drop(metadata, reference, "left") %>%
-  sim_drop(metadata, reference, "right") %>%
+  sim_filter(metadata, filter_drop = reference, filter_side = "left") %>%
+  sim_filter(metadata, filter_drop = reference, filter_side = "right") %>%
   sim_all_same(metadata,
                all_same_cols_rep,
                annotation_cols,
@@ -243,12 +243,8 @@ all_same_cols_rep_ref <-
 
 rep_ref <-
   sim_df %>%
-  sim_keep(metadata,
-           reference,
-           "left") %>%
-  sim_keep(metadata,
-           reference,
-           "right") %>%
+  sim_filter(metadata, filter_keep = reference, filter_side = "left") %>%
+  sim_filter(metadata, filter_keep = reference, filter_side = "right") %>%
   sim_all_same(
     metadata,
     all_same_cols_rep_ref,
