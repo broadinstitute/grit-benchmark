@@ -1023,11 +1023,11 @@ sim_metrics <- function(munged_sim,
 #' suppressMessages(suppressWarnings(library(magrittr)))
 #' population <- tibble::tibble(
 #'   Metadata_group = sample(c("a", "b", "c", "d"), 100, replace = TRUE),
-#'   x1 <- rnorm(100),
-#'   x2 <- rnorm(100),
-#'   x3 <- rnorm(100),
-#'   x4 <- rnorm(100),
-#'   x5 <- rnorm(100)
+#'   x1 = rnorm(100),
+#'   x2 = rnorm(100),
+#'   x3 = rnorm(100),
+#'   x4 = rnorm(100),
+#'   x5 = rnorm(100)
 #' )
 #' metadata <- cytoeval::get_annotation(population)
 #' annotation_cols <- c("Metadata_group", "Metadata_type")
@@ -1039,6 +1039,7 @@ sim_metrics <- function(munged_sim,
 sim_plot <-
   function(sim_df,
            annotation_column,
+           calculate_sim_rank = FALSE,
            trim_label = NULL) {
     col1 <- paste0(annotation_column, "1")
     col2 <- paste0(annotation_column, "2")
@@ -1057,11 +1058,20 @@ sim_plot <-
       col2_short <- col2
     }
     
-    p <- sim_df %>%
+    sim_df %<>%
       dplyr::group_by(across(all_of(c(col1_short, col2_short)))) %>%
-      summarise(sim = mean(sim), .groups = "keep") %>%
-      dplyr::group_by(across(all_of(c(col1_short)))) %>%
-      dplyr::mutate(sim_rank = rank(-sim) / length(sim)) %>%
+      summarise(across(any_of(c("sim", "sim_rank")), mean), .groups = "keep")
+      
+    if (calculate_sim_rank) {
+      sim_df %<>%
+        dplyr::group_by(across(all_of(c(col1_short)))) %>%
+        dplyr::mutate(sim_rank = rank(-sim) / length(sim))
+        
+    } else {
+      stopifnot("sim_rank" %in% names(sim_df))
+    }
+      
+    p <- sim_df %>%
       ggplot2::ggplot(ggplot2::aes(
         !!col1_short_sym,
         !!col2_short_sym,
@@ -1082,3 +1092,92 @@ sim_plot <-
     
   }
 
+#' Widen a symmetric similarity matrix.
+#' 
+#' \code{sim_plot} Plots similarity matrix.
+#'
+#' @param sim_df tbl with melted similarity matrix.
+#' @param primary_key_column character string specifying the column in \code{sim_df} to use to uniquely identify rows and columns
+#' @param annotation_column character string specifying the column in \code{sim_df} to use to annotate rows and columns
+#'
+#' @return Widened similarity matrix.
+#'
+#' @importFrom magrittr %>%
+#' @importFrom magrittr %>%
+#' @importFrom rlang !!
+#'
+#' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = sample(c("a", "b", "c", "d"), 100, replace = TRUE),
+#'   x1 <- rnorm(100),
+#'   x2 <- rnorm(100),
+#'   x3 <- rnorm(100),
+#'   x4 <- rnorm(100),
+#'   x5 <- rnorm(100)
+#' )
+#' population$Metadata_id <- seq(nrow(population))
+#' metadata <- cytoeval::get_annotation(population)
+#' annotation_cols <- c("Metadata_group", "Metadata_type")
+#' sim_df <- cytoeval::sim_calculate(population, method = "pearson")
+#' sim_df <- cytoeval::sim_annotate(sim_df, metadata, annotation_cols)
+#' annotation_column <- "Metadata_group"
+#' primary_key_column <- "Metadata_id"
+#' res <- cytoeval::sim_wider(sim_df, annotation_column, primary_key_column)
+#' res
+#' data.frame(id = rownames(res)) %>% inner_join(attr(res, "map"))
+#' @export
+sim_wider <-
+  function(sim_df,
+           annotation_column,
+           primary_key_column) {
+    
+    primary_key_column1 <- paste0(primary_key_column, "1")
+    primary_key_column2 <- paste0(primary_key_column, "2")
+    primary_key_columns <- c(primary_key_column1, primary_key_column2)
+    
+    annotation_column1 <- paste0(annotation_column, "1")
+    annotation_column2 <- paste0(annotation_column, "2")
+    annotation_columns <- c(annotation_column1, annotation_column2)
+
+    annotation_column_unique1 <- paste(annotation_column1, "uniq", sep = "_")
+    annotation_column_unique2 <- paste(annotation_column2, "uniq", sep = "_")
+    
+    sim_df_wider <-
+      sim_df %>%
+      select(all_of(c(primary_key_columns, "sim"))) %>%
+      arrange(across(all_of(primary_key_columns))) %>%
+      pivot_wider(names_from = primary_key_column2, values_from = "sim") %>%
+      column_to_rownames(primary_key_column1)    
+    
+    # assumes symmetric matrix
+    sim_df_wider %<>%
+      select(all_of(row.names(sim_df_wider)))
+    
+    stopifnot(colnames(sim_df_wider) == row.names(sim_df_wider))
+    
+    map1 <- sim_df %>% select(all_of(c(primary_key_column1, annotation_column1))) %>% distinct() %>% arrange(across(all_of(c(primary_key_column1, annotation_column1))))
+    map2 <- sim_df %>% select(all_of(c(primary_key_column2, annotation_column2))) %>% distinct() %>% arrange(across(all_of(c(primary_key_column2, annotation_column2))))
+    
+    stopifnot(all(map1 == map2))
+    
+    map1[[annotation_column_unique1]] <- paste(map1[[annotation_column1]], seq_along(map1[[annotation_column1]]), sep = ":")
+
+    map1[[primary_key_column1]] <- as.character(map1[[primary_key_column1]])
+
+    key1 <- data.frame(x = as.character(row.names(sim_df_wider)))
+    names(key1) <- primary_key_column1
+    
+    value1 <- key1 %>% inner_join(map1) %>% pull(annotation_column1)
+
+    value_unique1 <- key1 %>% inner_join(map1) %>% pull(annotation_column_unique1)
+
+    row.names(sim_df_wider) <- value_unique1 
+    colnames(sim_df_wider)  <- row.names(sim_df_wider)
+    
+    map1 %<>% select(id = annotation_column_unique1, annotation = annotation_column1, primary_key = primary_key_column1)
+    
+    attr(sim_df_wider, "map") <- map1
+    
+    sim_df_wider
+  }
