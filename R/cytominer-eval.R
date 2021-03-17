@@ -23,7 +23,7 @@ sim_cols <- c("id1", "id2", "sim")
 #'   Metadata_batch = c("a", "a", "b", "b", "a", "a", "b", "b"),
 #'   AreaShape_Area = c(10, 12, 15, 16, 8, 8, 7, 7)
 #' )
-#' cytoeval::get_annotation(population, annotation_prefix = "Metadata_")
+#' simplyr::get_annotation(population, annotation_prefix = "Metadata_")
 #' @export
 get_annotation <-
   function(population,
@@ -57,7 +57,7 @@ get_annotation <-
 #'   Metadata_batch = c("a", "a", "b", "b", "a", "a", "b", "b"),
 #'   AreaShape_Area = c(10, 12, 15, 16, 8, 8, 7, 7)
 #' )
-#' cytoeval::drop_annotation(population, annotation_prefix = "Metadata_")
+#' simplyr::drop_annotation(population, annotation_prefix = "Metadata_")
 #' @export
 drop_annotation <-
   function(population,
@@ -87,7 +87,7 @@ drop_annotation <-
 #'   y = x +rnorm(4) / 100,
 #'   z = y + rnorm(4) / 1000
 #' )
-#' cytoeval::sim_calculate(population, method = "pearson")
+#' simplyr::sim_calculate(population, method = "pearson")
 #' @export
 sim_calculate <-
   function(population,
@@ -148,10 +148,10 @@ sim_calculate <-
 #'   y = x +rnorm(4) / 100,
 #'   z = y + rnorm(4) / 1000
 #' )
-#' metadata <- cytoeval::get_annotation(population)
+#' metadata <- simplyr::get_annotation(population)
 #' annotation_cols <- c("Metadata_group")
-#' sim_df <- cytoeval::sim_calculate(population, method = "pearson")
-#' cytoeval::sim_annotate(sim_df, metadata, annotation_cols)
+#' sim_df <- simplyr::sim_calculate(population, method = "pearson")
+#' simplyr::sim_annotate(sim_df, metadata, annotation_cols)
 #' @export
 sim_annotate <-
   function(sim_df,
@@ -215,14 +215,14 @@ sim_annotate <-
 #'   y = x +rnorm(4) / 100,
 #'   z = y + rnorm(4) / 1000
 #' )
-#' metadata <- cytoeval::get_annotation(population)
+#' metadata <- simplyr::get_annotation(population)
 #' annotation_cols <- c("Metadata_group", "Metadata_type")
-#' sim_df <- cytoeval::sim_calculate(population, method = "pearson")
-#' sim_df <- cytoeval::sim_annotate(sim_df, metadata, annotation_cols)
+#' sim_df <- simplyr::sim_calculate(population, method = "pearson")
+#' sim_df <- simplyr::sim_annotate(sim_df, metadata, annotation_cols)
 #' filter_keep <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
 #' filter_drop <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
-#' cytoeval::sim_filter(sim_df, metadata, filter_keep, "left")
-#' cytoeval::sim_filter(sim_df, metadata, filter_drop, "left")
+#' simplyr::sim_filter(sim_df, metadata, filter_keep, "left")
+#' simplyr::sim_filter(sim_df, metadata, filter_drop, "left")
 #' @export
 sim_filter <-
   function(sim_df,
@@ -294,14 +294,14 @@ sim_filter <-
 #'   y = x + rnorm(n) / 100,
 #'   z = y + rnorm(n) / 1000
 #' )
-#' metadata <- cytoeval::get_annotation(population)
+#' metadata <- simplyr::get_annotation(population)
 #' annotation_cols <- c("Metadata_group", "Metadata_type")
-#' sim_df <- cytoeval::sim_calculate(population, method = "pearson")
-#' sim_df <- cytoeval::sim_annotate(sim_df, metadata, annotation_cols)
+#' sim_df <- simplyr::sim_calculate(population, method = "pearson")
+#' sim_df <- simplyr::sim_annotate(sim_df, metadata, annotation_cols)
 #' all_same_cols <- c("Metadata_group")
 #' include_group_tag <- TRUE
 #' drop_lower <- FALSE
-#' cytoeval::sim_all_same(sim_df, metadata, all_same_cols, annotation_cols, include_group_tag, drop_lower)
+#' simplyr::sim_all_same(sim_df, metadata, all_same_cols, annotation_cols, include_group_tag, drop_lower)
 #' @export
 sim_all_same <-
   function(sim_df,
@@ -372,14 +372,14 @@ sim_all_same <-
 #'   y = x + rnorm(n) / 100,
 #'   z = y + rnorm(n) / 1000
 #' )
-#' metadata <- cytoeval::get_annotation(population)
+#' metadata <- simplyr::get_annotation(population)
 #' annotation_cols <- c("Metadata_group", "Metadata_type")
-#' sim_df <- cytoeval::sim_calculate(population, method = "pearson")
-#' sim_df <- cytoeval::sim_annotate(sim_df, metadata, annotation_cols)
+#' sim_df <- simplyr::sim_calculate(population, method = "pearson")
+#' sim_df <- simplyr::sim_annotate(sim_df, metadata, annotation_cols)
 #' all_same_cols <- c("Metadata_group")
 #' filter_keep_right <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
 #' drop_reference <- FALSE
-#' cytoeval::sim_all_same_keep_some(sim_df, metadata, all_same_cols, filter_keep_right, annotation_cols, drop_reference)
+#' simplyr::sim_all_same_keep_some(sim_df, metadata, all_same_cols, filter_keep_right, annotation_cols, drop_reference)
 #' @export
 sim_all_same_keep_some <-
   function(sim_df,
@@ -445,17 +445,17 @@ sim_all_same_keep_some <-
 #'   y = x +rnorm(4) / 100,
 #'   z = y + rnorm(4) / 1000
 #' )
-#' metadata <- cytoeval::get_annotation(population)
+#' metadata <- simplyr::get_annotation(population)
 #' annotation_cols <- c("Metadata_group", "Metadata_type")
-#' sim_df <- cytoeval::sim_calculate(population, method = "pearson")
-#' sim_df <- cytoeval::sim_annotate(sim_df, metadata, annotation_cols)
+#' sim_df <- simplyr::sim_calculate(population, method = "pearson")
+#' sim_df <- simplyr::sim_annotate(sim_df, metadata, annotation_cols)
 #' all_same_cols <- c("Metadata_group")
 #' all_different_cols <- c("Metadata_type1")
 #' any_different_cols <- c("Metadata_type2")
 #' filter_drop_left <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
 #' filter_drop_right <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
 #' drop_reference <- FALSE
-#' cytoeval::sim_some_different_drop_some(sim_df, metadata, any_different_cols, all_same_cols, all_different_cols, filter_drop_left, filter_drop_right, annotation_cols)
+#' simplyr::sim_some_different_drop_some(sim_df, metadata, any_different_cols, all_same_cols, all_different_cols, filter_drop_left, filter_drop_right, annotation_cols)
 #' @export
 sim_some_different_drop_some <-
   function(sim_df,
@@ -1029,12 +1029,12 @@ sim_metrics <- function(munged_sim,
 #'   x4 = rnorm(100),
 #'   x5 = rnorm(100)
 #' )
-#' metadata <- cytoeval::get_annotation(population)
+#' metadata <- simplyr::get_annotation(population)
 #' annotation_cols <- c("Metadata_group", "Metadata_type")
-#' sim_df <- cytoeval::sim_calculate(population, method = "pearson")
-#' sim_df <- cytoeval::sim_annotate(sim_df, metadata, annotation_cols)
+#' sim_df <- simplyr::sim_calculate(population, method = "pearson")
+#' sim_df <- simplyr::sim_annotate(sim_df, metadata, annotation_cols)
 #' annotation_column <- "Metadata_group"
-#' cytoeval::sim_plot(sim_df, annotation_column)
+#' simplyr::sim_plot(sim_df, annotation_column)
 #' @export
 sim_plot <-
   function(sim_df,
@@ -1117,13 +1117,13 @@ sim_plot <-
 #'   x5 <- rnorm(100)
 #' )
 #' population$Metadata_id <- seq(nrow(population))
-#' metadata <- cytoeval::get_annotation(population)
+#' metadata <- simplyr::get_annotation(population)
 #' annotation_cols <- c("Metadata_group", "Metadata_type")
-#' sim_df <- cytoeval::sim_calculate(population, method = "pearson")
-#' sim_df <- cytoeval::sim_annotate(sim_df, metadata, annotation_cols)
+#' sim_df <- simplyr::sim_calculate(population, method = "pearson")
+#' sim_df <- simplyr::sim_annotate(sim_df, metadata, annotation_cols)
 #' annotation_column <- "Metadata_group"
 #' primary_key_column <- "Metadata_id"
-#' res <- cytoeval::sim_wider(sim_df, annotation_column, primary_key_column)
+#' res <- simplyr::sim_wider(sim_df, annotation_column, primary_key_column)
 #' res
 #' data.frame(id = rownames(res)) %>% inner_join(attr(res, "map"))
 #' @export
