@@ -117,13 +117,162 @@ sim_calculate <-
       tidyr::pivot_longer(-id1, names_to = "id2", values_to = "sim") %>%
       dplyr::mutate(id2 = as.integer(id2)) %>%
       dplyr::filter(id1 != id2)
+
+    attr(sim_df, "metric_metadata") <- list(method = method)
     
-    # do this instead of adding a column because adding a fourth, character
-    # column (<16 chars) increases the size of the data.frame by ~50%
-    attr(sim_df, "method") <- method
+    attr(sim_df, "row_metadata") <- metadata
     
     sim_df
   }
+
+#' Write similarity matrix.
+#'
+#' \code{sim_write} writes similarity matrix.
+#'
+#' @param sim_df tbl with melted similarity matrix.
+#' @param dirname character string specifying directory name.
+#' @param file_format character string specify file format. This must be one of \code{csv} or \code{parquet}(default).
+#'
+#' @return \code{sim_df}
+#' @export
+#'
+#' @importFrom magrittr %>%
+#'
+#'
+#' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = sample(c("a", "b"), 4, replace = TRUE),
+#'   x = rnorm(4),
+#'   y = x +rnorm(4) / 100,
+#'   z = y + rnorm(4) / 1000
+#' )
+#' sim_df <- simplyr::sim_calculate(population, method = "pearson")
+#' sim_df %>% simplyr::sim_write("/tmp/test")
+#' readr::read_csv("/tmp/test/test.csv")
+#' readr::read_csv("/tmp/test/test_metadata.csv")
+#' jsonlite::read_json("/tmp/test/test_metadata.json")
+#' @export
+sim_write <- function(sim_df, dirname, file_format = "parquet") {
+  stopifnot(!is.null(attr(sim_df, "row_metadata")))
+  
+  stopifnot(!is.null(attr(sim_df, "metric_metadata")))
+  
+  futile.logger::flog.info(glue::glue("Creating {dirname} ..."))
+  dir.create(dirname, showWarnings = FALSE)
+  
+  sim_filename <- paste(basename(dirname), file_format, sep = ".")
+  
+  row_metadata_filename <-
+    paste(paste0(basename(dirname), "_metadata"), file_format, sep = ".")
+  
+  metric_metadata_filename <-
+    paste(paste0(basename(dirname), "_metadata"), "json", sep = ".")
+  
+  sim_filename %<>% file.path(dirname, .)
+  row_metadata_filename %<>% file.path(dirname, .)
+  metric_metadata_filename %<>% file.path(dirname, .)
+  
+  if (file_format == "csv") {
+    writer <- readr::write_csv
+  } else {
+    futile.logger::flog.info(glue::glue("Using Parquet format ..."))
+    
+    writer <- arrow::write_parquet
+  }
+  
+  futile.logger::flog.info(glue::glue("Writing {sim_filename} ..."))
+  
+  sim_df %>% writer(sim_filename)
+  
+  futile.logger::flog.info(glue::glue("Writing {row_metadata_filename} ..."))
+  
+  attr(sim_df, "row_metadata") %>% writer(row_metadata_filename)
+  
+  futile.logger::flog.info(glue::glue("Writing {metric_metadata_filename} ..."))
+  
+  attr(sim_df, "metric_metadata") %>% jsonlite::write_json(metric_metadata_filename)
+  
+}
+
+
+#' Read similarity matrix.
+#'
+#' \code{sim_read} reads similarity matrix.
+#'
+#' @param dirname character string specifying directory name.
+#'
+#' @return tbl with similarity matrix.
+#' @export
+#'
+#' @importFrom magrittr %>%
+#' @importFrom magrittr %<>%
+#'
+#' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = sample(c("a", "b"), 4, replace = TRUE),
+#'   x = rnorm(4),
+#'   y = x +rnorm(4) / 100,
+#'   z = y + rnorm(4) / 1000
+#' )
+#' sim_df <- simplyr::sim_calculate(population, method = "pearson")
+#' sim_df %>% simplyr::sim_write("/tmp/test")
+#' sim_df <- simplyr::sim_read("/tmp/test")
+#' @export
+sim_read <- function(dirname) {
+
+  sim_filename_csv <- paste(basename(dirname), "csv", sep = ".")
+  sim_filename_csv %<>% file.path(dirname, .)
+  
+  sim_filename_parquet <- paste(basename(dirname), "parquet", sep = ".")
+  sim_filename_parquet %<>% file.path(dirname, .)
+  
+  stopifnot(file.exists(sim_filename_parquet) || file.exists(sim_filename_csv))
+  
+  if(file.exists(sim_filename_parquet)) {
+    futile.logger::flog.info(glue::glue("Parquet format detected ..."))
+    
+    file_format <- "parquet"
+    
+  } else {
+    futile.logger::flog.info(glue::glue("CSV format detected ..."))
+    
+    file_format <- "csv"
+    
+  }
+
+  sim_filename <- paste(basename(dirname), file_format, sep = ".")
+  
+  row_metadata_filename <-
+    paste(paste0(basename(dirname), "_metadata"), file_format, sep = ".")
+  
+  metric_metadata_filename <-
+    paste(paste0(basename(dirname), "_metadata"), "json", sep = ".")
+  
+  sim_filename %<>% file.path(dirname, .)
+  row_metadata_filename %<>% file.path(dirname, .)
+  metric_metadata_filename %<>% file.path(dirname, .)
+  
+  if (file_format == "csv") {
+    reader <- readr::read_csv
+  } else {
+    reader <- arrow::read_parquet
+  }
+  
+  futile.logger::flog.info(glue::glue("Reading {sim_filename} ..."))
+  
+  sim_df <- reader(sim_filename)
+  
+  futile.logger::flog.info(glue::glue("Reading {row_metadata_filename} ..."))
+  
+  attr(sim_df, "row_metadata") <- reader(row_metadata_filename)
+  
+  futile.logger::flog.info(glue::glue("Reading {metric_metadata_filename} ..."))
+  
+  attr(sim_df, "metric_metadata") <- jsonlite::read_json(metric_metadata_filename)
+  
+}
 
 #' Annotate melted similarity matrix.
 #'
