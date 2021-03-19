@@ -117,7 +117,7 @@ sim_calculate <-
       tidyr::pivot_longer(-id1, names_to = "id2", values_to = "sim") %>%
       dplyr::mutate(id2 = as.integer(id2)) %>%
       dplyr::filter(id1 != id2)
-
+    
     attr(sim_df, "metric_metadata") <- list(method = method)
     
     attr(sim_df, "row_metadata") <- metadata
@@ -221,16 +221,17 @@ sim_write <- function(sim_df, dirname, file_format = "parquet") {
 #' sim_df <- simplyr::sim_read("/tmp/test")
 #' @export
 sim_read <- function(dirname) {
-
   sim_filename_csv <- paste(basename(dirname), "csv", sep = ".")
   sim_filename_csv %<>% file.path(dirname, .)
   
-  sim_filename_parquet <- paste(basename(dirname), "parquet", sep = ".")
+  sim_filename_parquet <-
+    paste(basename(dirname), "parquet", sep = ".")
   sim_filename_parquet %<>% file.path(dirname, .)
   
-  stopifnot(file.exists(sim_filename_parquet) || file.exists(sim_filename_csv))
+  stopifnot(file.exists(sim_filename_parquet) ||
+              file.exists(sim_filename_csv))
   
-  if(file.exists(sim_filename_parquet)) {
+  if (file.exists(sim_filename_parquet)) {
     futile.logger::flog.info(glue::glue("Parquet format detected ..."))
     
     file_format <- "parquet"
@@ -241,7 +242,7 @@ sim_read <- function(dirname) {
     file_format <- "csv"
     
   }
-
+  
   sim_filename <- paste(basename(dirname), file_format, sep = ".")
   
   row_metadata_filename <-
@@ -270,7 +271,8 @@ sim_read <- function(dirname) {
   
   futile.logger::flog.info(glue::glue("Reading {metric_metadata_filename} ..."))
   
-  attr(sim_df, "metric_metadata") <- jsonlite::read_json(metric_metadata_filename)
+  attr(sim_df, "metric_metadata") <-
+    jsonlite::read_json(metric_metadata_filename)
   
 }
 
@@ -279,7 +281,6 @@ sim_read <- function(dirname) {
 #' \code{sim_annotate} annotates a melted similarity matrix.
 #'
 #' @param sim_df tbl with melted similarity matrix.
-#' @param metadata tbl with metadata annotations with which to annotate the similarity matrix.
 #' @param annotation_cols character vector specifying annotation columns.
 #' @param index optional character string specifying whether to annotate left index, right index, or both.  This must be one of the strings \code{"both"} (default), \code{"left"}, \code{"right"}.
 #'
@@ -297,16 +298,18 @@ sim_read <- function(dirname) {
 #'   y = x +rnorm(4) / 100,
 #'   z = y + rnorm(4) / 1000
 #' )
-#' metadata <- simplyr::get_annotation(population)
 #' annotation_cols <- c("Metadata_group")
 #' sim_df <- simplyr::sim_calculate(population, method = "pearson")
-#' simplyr::sim_annotate(sim_df, metadata, annotation_cols)
+#' simplyr::sim_annotate(sim_df, annotation_cols)
 #' @export
 sim_annotate <-
   function(sim_df,
-           metadata,
            annotation_cols,
            index = "both") {
+    metadata <- attr(sim_df, "row_metadata")
+    
+    stopifnot(!is.null(metadata))
+    
     metadata_i <-
       metadata %>%
       select(id, any_of(annotation_cols))
@@ -345,7 +348,6 @@ sim_annotate <-
 #' \code{sim_filter} filters rows of the melted similarity matrix.
 #'
 #' @param sim_df tbl with melted similarity matrix.
-#' @param metadata tbl with metadata annotations for the similarity matrix.
 #' @param filter_keep optional tbl of metadata specifying which rows to keep.
 #' @param filter_drop optional tbl of metadata specifying which rows to drop.
 #' @param filter_side character string specifying which index to filter on. This must be one of the strings \code{"left"} or \code{"right"}.
@@ -364,21 +366,23 @@ sim_annotate <-
 #'   y = x +rnorm(4) / 100,
 #'   z = y + rnorm(4) / 1000
 #' )
-#' metadata <- simplyr::get_annotation(population)
 #' annotation_cols <- c("Metadata_group", "Metadata_type")
 #' sim_df <- simplyr::sim_calculate(population, method = "pearson")
-#' sim_df <- simplyr::sim_annotate(sim_df, metadata, annotation_cols)
+#' sim_df <- simplyr::sim_annotate(sim_df, annotation_cols)
 #' filter_keep <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
 #' filter_drop <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
-#' simplyr::sim_filter(sim_df, metadata, filter_keep, "left")
-#' simplyr::sim_filter(sim_df, metadata, filter_drop, "left")
+#' simplyr::sim_filter(sim_df, filter_keep, "left")
+#' simplyr::sim_filter(sim_df, filter_drop, "left")
 #' @export
 sim_filter <-
   function(sim_df,
-           metadata,
            filter_keep = NULL,
            filter_drop = NULL,
            filter_side = NULL) {
+    metadata <- attr(sim_df, "row_metadata")
+    
+    stopifnot(!is.null(metadata))
+    
     stopifnot(filter_side %in% c("left", "right"))
     
     # if there's nothing to keep and nothing to drop, then assume there is
@@ -422,7 +426,6 @@ sim_filter <-
 #' \code{sim_all_same} Filters melted similarity matrix to keep pairs with the same values in specific columns.
 #'
 #' @param sim_df tbl with melted similarity matrix.
-#' @param metadata tbl with metadata annotations for the similarity matrix.
 #' @param all_same_cols character vector specifying columns.
 #' @param annotation_cols optional character vector specifying which columns from \code{metadata} to annotate the left index of the filtered \code{sim_df} with.
 #' @param include_group_tag optional boolean specifying whether to include an identifier for the pairs using the values in the \code{all_same_cols} columns.
@@ -443,22 +446,24 @@ sim_filter <-
 #'   y = x + rnorm(n) / 100,
 #'   z = y + rnorm(n) / 1000
 #' )
-#' metadata <- simplyr::get_annotation(population)
 #' annotation_cols <- c("Metadata_group", "Metadata_type")
 #' sim_df <- simplyr::sim_calculate(population, method = "pearson")
-#' sim_df <- simplyr::sim_annotate(sim_df, metadata, annotation_cols)
+#' sim_df <- simplyr::sim_annotate(sim_df, annotation_cols)
 #' all_same_cols <- c("Metadata_group")
 #' include_group_tag <- TRUE
 #' drop_lower <- FALSE
-#' simplyr::sim_all_same(sim_df, metadata, all_same_cols, annotation_cols, include_group_tag, drop_lower)
+#' simplyr::sim_all_same(sim_df, all_same_cols, annotation_cols, include_group_tag, drop_lower)
 #' @export
 sim_all_same <-
   function(sim_df,
-           metadata,
            all_same_cols,
            annotation_cols = NULL,
            include_group_tag = FALSE,
            drop_lower = FALSE) {
+    metadata <- attr(sim_df, "row_metadata")
+    
+    stopifnot(!is.null(metadata))
+    
     metadata_i <-
       metadata %>%
       dplyr::select(id, dplyr::all_of(all_same_cols)) %>%
@@ -500,7 +505,6 @@ sim_all_same <-
 #' \code{sim_all_same} Filters melted similarity matrix to keep pairs with the same values in specific columns, keeping only some of these pairs.
 #'
 #' @param sim_df tbl with melted similarity matrix.
-#' @param metadata tbl with metadata annotations for the similarity matrix.
 #' @param all_same_cols character vector specifying columns.
 #' @param filter_keep_right tbl of metadata specifying which rows to keep on the right index.
 #' @param annotation_cols optional character vector specifying which columns from \code{metadata} to annotate the left index of the filtered \code{sim_df} with.
@@ -521,23 +525,25 @@ sim_all_same <-
 #'   y = x + rnorm(n) / 100,
 #'   z = y + rnorm(n) / 1000
 #' )
-#' metadata <- simplyr::get_annotation(population)
 #' annotation_cols <- c("Metadata_group", "Metadata_type")
 #' sim_df <- simplyr::sim_calculate(population, method = "pearson")
-#' sim_df <- simplyr::sim_annotate(sim_df, metadata, annotation_cols)
+#' sim_df <- simplyr::sim_annotate(sim_df, annotation_cols)
 #' all_same_cols <- c("Metadata_group")
 #' filter_keep_right <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
 #' drop_reference <- FALSE
-#' simplyr::sim_all_same_keep_some(sim_df, metadata, all_same_cols, filter_keep_right, annotation_cols, drop_reference)
+#' simplyr::sim_all_same_keep_some(sim_df, all_same_cols, filter_keep_right, annotation_cols, drop_reference)
 #' @export
 sim_all_same_keep_some <-
   function(sim_df,
-           metadata,
            all_same_cols,
            filter_keep_right,
            annotation_cols = NULL,
            drop_reference = TRUE)
   {
+    metadata <- attr(sim_df, "row_metadata")
+    
+    stopifnot(!is.null(metadata))
+    
     sim_df %<>%
       sim_all_same(metadata,
                    all_same_cols) %>%
@@ -571,7 +577,6 @@ sim_all_same_keep_some <-
 #' \code{sim_some_different_drop_some} Filters melted similarity matrix to keep pairs with the same values in specific columns, keeping only some of these pairs.
 #'
 #' @param sim_df tbl with melted similarity matrix.
-#' @param metadata tbl with metadata annotations for the similarity matrix.
 #' @param any_different_cols character vector specifying columns.
 #' @param all_same_cols optional character vector specifying columns.
 #' @param all_different_cols optional character vector specifying columns.
@@ -594,17 +599,16 @@ sim_all_same_keep_some <-
 #'   y = x +rnorm(4) / 100,
 #'   z = y + rnorm(4) / 1000
 #' )
-#' metadata <- simplyr::get_annotation(population)
 #' annotation_cols <- c("Metadata_group", "Metadata_type")
 #' sim_df <- simplyr::sim_calculate(population, method = "pearson")
-#' sim_df <- simplyr::sim_annotate(sim_df, metadata, annotation_cols)
+#' sim_df <- simplyr::sim_annotate(sim_df,  annotation_cols)
 #' all_same_cols <- c("Metadata_group")
 #' all_different_cols <- c("Metadata_type1")
 #' any_different_cols <- c("Metadata_type2")
 #' filter_drop_left <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
 #' filter_drop_right <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
 #' drop_reference <- FALSE
-#' simplyr::sim_some_different_drop_some(sim_df, metadata, any_different_cols, all_same_cols, all_different_cols, filter_drop_left, filter_drop_right, annotation_cols)
+#' simplyr::sim_some_different_drop_some(sim_df,  any_different_cols, all_same_cols, all_different_cols, filter_drop_left, filter_drop_right, annotation_cols)
 #' @export
 sim_some_different_drop_some <-
   function(sim_df,
@@ -616,6 +620,10 @@ sim_some_different_drop_some <-
            filter_drop_right = NULL,
            annotation_cols = NULL) {
     stopifnot(!any(all_same_cols %in% all_different_cols))
+    
+    metadata <- attr(sim_df, "row_metadata")
+    
+    stopifnot(!is.null(metadata))
     
     metadata_i <- metadata
     
@@ -725,11 +733,11 @@ sim_some_different_drop_some <-
 #' Filter rows of the melted similarity matrix to create several sets of pairs.
 #'
 #' \code{sim_some_different_drop_some} Filters melted similarity matrix to create several sets of pairs.
-#' 
+#'
 #' 0. Filter out some rows
-#' 
+#'
 #' Filter out pairs that match \code{drop_group} in either right or left indices
-#' 
+#'
 #' 1. Similarity to reference
 #'
 #' Fetch similarities between
@@ -789,11 +797,10 @@ sim_some_different_drop_some <-
 #' - have *different* values in *at least one* column of \code{any_different_cols_group}
 #'
 #' Keep, both, (a, b) and (b, a)
-#' 
-#' 
-#' 
+#'
+#'
+#'
 #' @param sim_df tbl with melted similarity matrix.
-#' @param metadata tbl with metadata annotations for the similarity matrix.
 #' @param all_same_cols character vector specifying columns.
 #' @param annotation_cols character vector specifying which columns from \code{metadata} to annotate the left index of the filtered \code{sim_df} with.
 #' @param any_different_cols optional character vector specifying columns.
@@ -812,7 +819,6 @@ sim_some_different_drop_some <-
 #' @examples
 sim_munge <-
   function(sim_df,
-           metadata,
            all_same_cols_rep,
            annotation_cols,
            all_same_cols_ref = NULL,
@@ -825,6 +831,10 @@ sim_munge <-
            reference = NULL,
            drop_reference = FALSE,
            drop_group = NULL) {
+    metadata <- attr(sim_df, "row_metadata")
+    
+    stopifnot(!is.null(metadata))
+    
     # ---- 0. Filter out some rows ----
     
     if (!is.null(drop_group)) {
@@ -1037,16 +1047,16 @@ sim_munge <-
 
 
 #' Compute metrics.
-#' 
+#'
 #' \code{sim_metrics} computes metrics.
 #'
 #' @param munged_sim output of \code{sim_munged}.
-#' @param sim_type character string specifying the background distributions for computing scaled metrics. This must be one of the strings \code{"non_rep"} or \code{"ref"}. 
+#' @param sim_type character string specifying the background distributions for computing scaled metrics. This must be one of the strings \code{"non_rep"} or \code{"ref"}.
 #' @param calculate_grouped optional boolean specifying whether to include grouped metrics.
 #' @param annotation_prefix optional character string specifying prefix for annotation columns (e.g. \code{"Metadata_"} (default)).
 #'
 #' @return list of metrics.
-#' 
+#'
 #' @export
 #'
 #' @examples
@@ -1094,8 +1104,8 @@ sim_metrics <- function(munged_sim,
         )),
         list(mean = mean, median = median)),
         .groups = "keep") %>%
-        dplyr::rename_with(~ paste(., sim_type, sep = "_"),
-                           dplyr::starts_with("sim_scaled")) %>%
+        dplyr::rename_with( ~ paste(., sim_type, sep = "_"),
+                            dplyr::starts_with("sim_scaled")) %>%
         dplyr::ungroup()
       
       sim_norm_agg %<>%
@@ -1108,8 +1118,8 @@ sim_metrics <- function(munged_sim,
       
       if (!is.null(identifier)) {
         sim_norm_agg %<>%
-          dplyr::rename_with( ~ paste(., identifier, sep = "_"),
-                              dplyr::starts_with("sim"))
+          dplyr::rename_with(~ paste(., identifier, sep = "_"),
+                             dplyr::starts_with("sim"))
       }
       
       sim_norm_agg
@@ -1132,8 +1142,8 @@ sim_metrics <- function(munged_sim,
   # append identified ("_i" for "individual")
   
   sim_norm_agg_agg %<>%
-    dplyr::rename_with(~ paste(., "i", sep = "_"),
-                       dplyr::starts_with("sim"))
+    dplyr::rename_with( ~ paste(., "i", sep = "_"),
+                        dplyr::starts_with("sim"))
   
   result <-
     list(per_row = sim_norm_agg,
@@ -1155,7 +1165,7 @@ sim_metrics <- function(munged_sim,
 
 
 #' Plot similarity matrix.
-#' 
+#'
 #' \code{sim_plot} Plots similarity matrix.
 #'
 #' @param sim_df tbl with melted similarity matrix.
@@ -1208,18 +1218,20 @@ sim_plot <-
     }
     
     sim_df %<>%
-      dplyr::group_by(across(all_of(c(col1_short, col2_short)))) %>%
+      dplyr::group_by(across(all_of(c(
+        col1_short, col2_short
+      )))) %>%
       summarise(across(any_of(c("sim", "sim_rank")), mean), .groups = "keep")
-      
+    
     if (calculate_sim_rank) {
       sim_df %<>%
         dplyr::group_by(across(all_of(c(col1_short)))) %>%
         dplyr::mutate(sim_rank = rank(-sim) / length(sim))
-        
+      
     } else {
       stopifnot("sim_rank" %in% names(sim_df))
     }
-      
+    
     p <- sim_df %>%
       ggplot2::ggplot(ggplot2::aes(
         !!col1_short_sym,
@@ -1242,7 +1254,7 @@ sim_plot <-
   }
 
 #' Widen a symmetric similarity matrix.
-#' 
+#'
 #' \code{sim_plot} Plots similarity matrix.
 #'
 #' @param sim_df tbl with melted similarity matrix.
@@ -1280,24 +1292,26 @@ sim_wider <-
   function(sim_df,
            annotation_column,
            primary_key_column) {
-    
     primary_key_column1 <- paste0(primary_key_column, "1")
     primary_key_column2 <- paste0(primary_key_column, "2")
-    primary_key_columns <- c(primary_key_column1, primary_key_column2)
+    primary_key_columns <-
+      c(primary_key_column1, primary_key_column2)
     
     annotation_column1 <- paste0(annotation_column, "1")
     annotation_column2 <- paste0(annotation_column, "2")
     annotation_columns <- c(annotation_column1, annotation_column2)
-
-    annotation_column_unique1 <- paste(annotation_column1, "uniq", sep = "_")
-    annotation_column_unique2 <- paste(annotation_column2, "uniq", sep = "_")
+    
+    annotation_column_unique1 <-
+      paste(annotation_column1, "uniq", sep = "_")
+    annotation_column_unique2 <-
+      paste(annotation_column2, "uniq", sep = "_")
     
     sim_df_wider <-
       sim_df %>%
       select(all_of(c(primary_key_columns, "sim"))) %>%
       arrange(across(all_of(primary_key_columns))) %>%
       pivot_wider(names_from = primary_key_column2, values_from = "sim") %>%
-      column_to_rownames(primary_key_column1)    
+      column_to_rownames(primary_key_column1)
     
     # assumes symmetric matrix
     sim_df_wider %<>%
@@ -1305,26 +1319,41 @@ sim_wider <-
     
     stopifnot(colnames(sim_df_wider) == row.names(sim_df_wider))
     
-    map1 <- sim_df %>% select(all_of(c(primary_key_column1, annotation_column1))) %>% distinct() %>% arrange(across(all_of(c(primary_key_column1, annotation_column1))))
-    map2 <- sim_df %>% select(all_of(c(primary_key_column2, annotation_column2))) %>% distinct() %>% arrange(across(all_of(c(primary_key_column2, annotation_column2))))
+    map1 <-
+      sim_df %>% select(all_of(c(
+        primary_key_column1, annotation_column1
+      ))) %>% distinct() %>% arrange(across(all_of(
+        c(primary_key_column1, annotation_column1)
+      )))
+    map2 <-
+      sim_df %>% select(all_of(c(
+        primary_key_column2, annotation_column2
+      ))) %>% distinct() %>% arrange(across(all_of(
+        c(primary_key_column2, annotation_column2)
+      )))
     
     stopifnot(all(map1 == map2))
     
-    map1[[annotation_column_unique1]] <- paste(map1[[annotation_column1]], seq_along(map1[[annotation_column1]]), sep = ":")
-
-    map1[[primary_key_column1]] <- as.character(map1[[primary_key_column1]])
-
+    map1[[annotation_column_unique1]] <-
+      paste(map1[[annotation_column1]], seq_along(map1[[annotation_column1]]), sep = ":")
+    
+    map1[[primary_key_column1]] <-
+      as.character(map1[[primary_key_column1]])
+    
     key1 <- data.frame(x = as.character(row.names(sim_df_wider)))
     names(key1) <- primary_key_column1
     
     value1 <- key1 %>% inner_join(map1) %>% pull(annotation_column1)
-
-    value_unique1 <- key1 %>% inner_join(map1) %>% pull(annotation_column_unique1)
-
-    row.names(sim_df_wider) <- value_unique1 
+    
+    value_unique1 <-
+      key1 %>% inner_join(map1) %>% pull(annotation_column_unique1)
+    
+    row.names(sim_df_wider) <- value_unique1
     colnames(sim_df_wider)  <- row.names(sim_df_wider)
     
-    map1 %<>% select(id = annotation_column_unique1, annotation = annotation_column1, primary_key = primary_key_column1)
+    map1 %<>% select(id = annotation_column_unique1,
+                     annotation = annotation_column1,
+                     primary_key = primary_key_column1)
     
     attr(sim_df_wider, "map") <- map1
     
