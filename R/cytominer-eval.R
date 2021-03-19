@@ -130,7 +130,7 @@ sim_calculate <-
 #' \code{sim_write} writes similarity matrix.
 #'
 #' @param sim_df tbl with melted similarity matrix.
-#' @param dirname character string specifying directory name.
+#' @param outdir character string specifying directory name.
 #' @param file_format character string specify file format. This must be one of \code{csv} or \code{parquet}(default).
 #'
 #' @return \code{sim_df}
@@ -153,25 +153,25 @@ sim_calculate <-
 #' readr::read_csv("/tmp/test/test_metadata.csv")
 #' jsonlite::read_json("/tmp/test/test_metadata.json")
 #' @export
-sim_write <- function(sim_df, dirname, file_format = "parquet") {
+sim_write <- function(sim_df, outdir, file_format = "parquet") {
   stopifnot(!is.null(attr(sim_df, "row_metadata")))
   
   stopifnot(!is.null(attr(sim_df, "metric_metadata")))
   
-  futile.logger::flog.info(glue::glue("Creating {dirname} ..."))
-  dir.create(dirname, showWarnings = FALSE)
+  futile.logger::flog.info(glue::glue("Creating {outdir} ..."))
+  dir.create(outdir, showWarnings = FALSE)
   
-  sim_filename <- paste(basename(dirname), file_format, sep = ".")
+  sim_filename <- paste(basename(outdir), file_format, sep = ".")
   
   row_metadata_filename <-
-    paste(paste0(basename(dirname), "_metadata"), file_format, sep = ".")
+    paste(paste0(basename(outdir), "_metadata"), file_format, sep = ".")
   
   metric_metadata_filename <-
-    paste(paste0(basename(dirname), "_metadata"), "json", sep = ".")
+    paste(paste0(basename(outdir), "_metadata"), "json", sep = ".")
   
-  sim_filename %<>% file.path(dirname, .)
-  row_metadata_filename %<>% file.path(dirname, .)
-  metric_metadata_filename %<>% file.path(dirname, .)
+  sim_filename %<>% file.path(outdir, .)
+  row_metadata_filename %<>% file.path(outdir, .)
+  metric_metadata_filename %<>% file.path(outdir, .)
   
   if (file_format == "csv") {
     writer <- readr::write_csv
@@ -200,7 +200,7 @@ sim_write <- function(sim_df, dirname, file_format = "parquet") {
 #'
 #' \code{sim_read} reads similarity matrix.
 #'
-#' @param dirname character string specifying directory name.
+#' @param outdir character string specifying directory name.
 #'
 #' @return tbl with similarity matrix.
 #' @export
@@ -220,13 +220,13 @@ sim_write <- function(sim_df, dirname, file_format = "parquet") {
 #' sim_df %>% simplyr::sim_write("/tmp/test")
 #' sim_df <- simplyr::sim_read("/tmp/test")
 #' @export
-sim_read <- function(dirname) {
-  sim_filename_csv <- paste(basename(dirname), "csv", sep = ".")
-  sim_filename_csv %<>% file.path(dirname, .)
+sim_read <- function(indir) {
+  sim_filename_csv <- paste(basename(indir), "csv", sep = ".")
+  sim_filename_csv %<>% file.path(indir, .)
   
   sim_filename_parquet <-
-    paste(basename(dirname), "parquet", sep = ".")
-  sim_filename_parquet %<>% file.path(dirname, .)
+    paste(basename(indir), "parquet", sep = ".")
+  sim_filename_parquet %<>% file.path(indir, .)
   
   stopifnot(file.exists(sim_filename_parquet) ||
               file.exists(sim_filename_csv))
@@ -243,17 +243,17 @@ sim_read <- function(dirname) {
     
   }
   
-  sim_filename <- paste(basename(dirname), file_format, sep = ".")
+  sim_filename <- paste(basename(indir), file_format, sep = ".")
   
   row_metadata_filename <-
-    paste(paste0(basename(dirname), "_metadata"), file_format, sep = ".")
+    paste(paste0(basename(indir), "_metadata"), file_format, sep = ".")
   
   metric_metadata_filename <-
-    paste(paste0(basename(dirname), "_metadata"), "json", sep = ".")
+    paste(paste0(basename(indir), "_metadata"), "json", sep = ".")
   
-  sim_filename %<>% file.path(dirname, .)
-  row_metadata_filename %<>% file.path(dirname, .)
-  metric_metadata_filename %<>% file.path(dirname, .)
+  sim_filename %<>% file.path(indir, .)
+  row_metadata_filename %<>% file.path(indir, .)
+  metric_metadata_filename %<>% file.path(indir, .)
   
   if (file_format == "csv") {
     reader <- readr::read_csv
