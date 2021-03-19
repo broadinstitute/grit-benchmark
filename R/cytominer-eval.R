@@ -84,7 +84,7 @@ drop_annotation <-
 #' population <- tibble::tibble(
 #'   Metadata_group = sample(c("a", "b"), 4, replace = TRUE),
 #'   x = rnorm(4),
-#'   y = x +rnorm(4) / 100,
+#'   y = x + rnorm(4) / 100,
 #'   z = y + rnorm(4) / 1000
 #' )
 #' simplyr::sim_calculate(population, method = "pearson")
@@ -128,12 +128,18 @@ sim_calculate <-
 #' Write similarity matrix.
 #'
 #' \code{sim_write} writes similarity matrix.
+#' 
+#' The output format can be either CSV or Parquet.
+#' 
+#' The \code{row_metadata} and \code{metric_metadata} attributes are saved as 
+#' separate files, for both formats. This is technically not required for 
+#' Parquet because it saves the attributes as well.
 #'
 #' @param sim_df tbl with melted similarity matrix.
 #' @param outdir character string specifying directory name.
 #' @param file_format character string specify file format. This must be one of \code{csv} or \code{parquet}(default).
 #'
-#' @return \code{sim_df}
+#' @return \code{sim_df}.
 #' @export
 #'
 #' @importFrom magrittr %>%
@@ -144,7 +150,7 @@ sim_calculate <-
 #' population <- tibble::tibble(
 #'   Metadata_group = sample(c("a", "b"), 4, replace = TRUE),
 #'   x = rnorm(4),
-#'   y = x +rnorm(4) / 100,
+#'   y = x + rnorm(4) / 100,
 #'   z = y + rnorm(4) / 1000
 #' )
 #' sim_df <- simplyr::sim_calculate(population, method = "pearson")
@@ -213,7 +219,7 @@ sim_write <- function(sim_df, outdir, file_format = "parquet") {
 #' population <- tibble::tibble(
 #'   Metadata_group = sample(c("a", "b"), 4, replace = TRUE),
 #'   x = rnorm(4),
-#'   y = x +rnorm(4) / 100,
+#'   y = x + rnorm(4) / 100,
 #'   z = y + rnorm(4) / 1000
 #' )
 #' sim_df <- simplyr::sim_calculate(population, method = "pearson")
@@ -295,7 +301,7 @@ sim_read <- function(indir) {
 #'   Metadata_group = sample(c("a", "b"), 4, replace = TRUE),
 #'   Metadata_type = sample(c("x", "y"), 4, replace = TRUE),
 #'   x = rnorm(4),
-#'   y = x +rnorm(4) / 100,
+#'   y = x + rnorm(4) / 100,
 #'   z = y + rnorm(4) / 1000
 #' )
 #' annotation_cols <- c("Metadata_group")
@@ -363,7 +369,7 @@ sim_annotate <-
 #'   Metadata_group = sample(c("a", "b"), 4, replace = TRUE),
 #'   Metadata_type = sample(c("x", "y"), 4, replace = TRUE),
 #'   x = rnorm(4),
-#'   y = x +rnorm(4) / 100,
+#'   y = x + rnorm(4) / 100,
 #'   z = y + rnorm(4) / 1000
 #' )
 #' annotation_cols <- c("Metadata_group", "Metadata_type")
@@ -591,7 +597,7 @@ sim_all_same_keep_some <-
 #'   Metadata_type1 = sample(c("x", "y"), 4, replace = TRUE),
 #'   Metadata_type2 = sample(c("p", "q"), 4, replace = TRUE),
 #'   x = rnorm(4),
-#'   y = x +rnorm(4) / 100,
+#'   y = x + rnorm(4) / 100,
 #'   z = y + rnorm(4) / 1000
 #' )
 #' annotation_cols <- c("Metadata_group", "Metadata_type")
