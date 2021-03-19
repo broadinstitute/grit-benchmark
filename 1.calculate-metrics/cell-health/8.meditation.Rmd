@@ -391,8 +391,8 @@ annotation_cols <-
     "Metadata_gene_name",
     "Metadata_pert_name")
 
-munged_sim <-
-  sim_munge(
+collated_sim <-
+  sim_collate(
     sim_df,
     reference,
     all_same_cols_rep = all_same_cols_rep,
@@ -412,10 +412,10 @@ munged_sim <-
 
 ```{r}
 norm_non_rep_metrics <- 
-  sim_metrics(munged_sim, "non_rep", calculate_grouped = TRUE)
+  sim_metrics(collated_sim, "non_rep", calculate_grouped = TRUE)
 
 norm_ref_metrics <- 
-  sim_metrics(munged_sim, "ref", calculate_grouped = TRUE)
+  sim_metrics(collated_sim, "ref", calculate_grouped = TRUE)
 
 per_row_metrics <-
   inner_join(
@@ -593,7 +593,7 @@ p_cutting_controls %>% group_by(across(all_of(all_same_cols_ref))) %>% tally()
 
 ```{r}
 all_sim_counts <-
-  munged_sim %>%
+  collated_sim %>%
   group_by(across(all_of(c("id1", all_same_cols_rep, "type")))) %>%
   tally() %>%
   arrange(across(all_of(all_same_cols_rep))) %>%
@@ -610,7 +610,7 @@ all_sim_counts %>%
 ```
 
 ```{r}
-sim_munged_query <-
+sim_collated_query <-
   function(msim, query, get_reference = NULL, all_same_cols_ref = NULL) {
     result <-
       msim %>% inner_join(query, by = colnames(query))
@@ -634,7 +634,7 @@ sim_munged_query <-
 
 ```{r}
 target_distributions <-
-  sim_munged_query(munged_sim, target_guide, reference, all_same_cols_ref)
+  sim_collated_query(collated_sim, target_guide, reference, all_same_cols_ref)
 
 target_distributions %>%
   group_by(type) %>%
@@ -647,7 +647,7 @@ target_distributions %>%
 ```{r}
 display_metrics_distributions <- function(target_guide) {
   target_distributions <-
-    sim_munged_query(munged_sim, target_guide, reference, all_same_cols_ref) %>%
+    sim_collated_query(collated_sim, target_guide, reference, all_same_cols_ref) %>%
     mutate(type = factor(type, levels = c("rep", "rep_group", "ref", "ref_rep", "non_rep"))) %>%
     mutate(id1 = ifelse(type == "ref_rep", -1, id1)) %>%
     mutate(type = 
@@ -697,7 +697,7 @@ target_guide <- data.frame(
   Metadata_pert_name = "ITGAV-1")
 
 target_distributions <-
-  sim_munged_query(munged_sim, target_guide, reference, all_same_cols_ref) %>%
+  sim_collated_query(collated_sim, target_guide, reference, all_same_cols_ref) %>%
   mutate(type = factor(type, levels = c("rep", "rep_group", "ref", "ref_rep", "non_rep"))) %>%
   mutate(type = 
            recode(type, 

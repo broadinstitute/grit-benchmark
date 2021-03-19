@@ -167,8 +167,8 @@ annotation_cols <-
     "Metadata_gene_name",
     "Metadata_pert_name")
 
-munged_sim <-
-  sim_munge(
+collated_sim <-
+  sim_collate(
     sim_df,
     reference,
     all_same_cols_rep = all_same_cols_rep,
@@ -191,7 +191,7 @@ Check for duplicates
 
 ```{r}
 stopifnot(
-  munged_sim %>%
+  collated_sim %>%
     anti_join(reference, by = colnames(reference)) %>%
     unite("id12", all_of(c("id1", "id2")), sep = ":") %>%
     pull("id12") %>%
@@ -201,7 +201,7 @@ stopifnot(
 )
 
 stopifnot(
-  munged_sim %>%
+  collated_sim %>%
     inner_join(reference, by = colnames(reference)) %>%
     filter(type == "rep") %>%
     unite("id12", all_of(c("id1", "id2")), sep = ":") %>%
@@ -212,7 +212,7 @@ stopifnot(
 )
 
 stopifnot(
-  munged_sim %>%
+  collated_sim %>%
     inner_join(reference, by = colnames(reference)) %>%
     filter(type == "rep_group") %>%
     unite("id12", all_of(c("id1", "id2")), sep = ":") %>%
@@ -223,7 +223,7 @@ stopifnot(
 )
 
 stopifnot(
-  munged_sim %>%
+  collated_sim %>%
     inner_join(reference, by = colnames(reference)) %>%
     filter(type != "rep" && type != "rep_group") %>%
     unite("id12", all_of(c("id1", "id2")), sep = ":") %>%
@@ -238,7 +238,7 @@ Report counts
 
 ```{r}
 all_sim_counts <-
-  munged_sim %>%
+  collated_sim %>%
   group_by(across(all_of(c("id1", all_same_cols_rep, "type")))) %>%
   tally() %>%
   arrange(across(all_of(all_same_cols_rep))) %>%
@@ -290,10 +290,10 @@ all_sim_counts %>%
 
 ```{r}
 norm_non_rep_metrics <- 
-  sim_metrics(munged_sim, "non_rep", calculate_grouped = TRUE)
+  sim_metrics(collated_sim, "non_rep", calculate_grouped = TRUE)
 
 norm_ref_metrics <- 
-  sim_metrics(munged_sim, "ref", calculate_grouped = TRUE)
+  sim_metrics(collated_sim, "ref", calculate_grouped = TRUE)
 ```
 
 
@@ -513,13 +513,13 @@ n_rep_group_count_check <-
 stopifnot(n_rep_group_count_test == n_rep_group_count_check)
 
 s_group_check <- 
-  munged_sim %>% 
+  collated_sim %>% 
   inner_join(target_guide) %>% 
   filter(type == "rep_group") %>% 
   pull("sim")
 
 s_controls_check <- 
-  munged_sim %>% 
+  collated_sim %>% 
   inner_join(target_guide) %>% 
   filter(type == "ref") %>% 
   pull("sim")
