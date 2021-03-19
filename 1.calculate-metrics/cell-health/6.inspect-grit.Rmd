@@ -81,15 +81,7 @@ head(metadata, 5)
 # Calculate similarity
 
 ```{r}
-if (file.exists("data/sim.parquet")) {
-  message("Loading existing similarity file...")
-  sim_df <- arrow::read_parquet("data/sim.parquet")
-    
-} else {
-  sim_df <- sim_calculate(profiles)
-  sim_df %>% arrow::write_parquet("data/sim.parquet")
-  
-}
+sim_df <- sim_calculate(profiles)
 ```
 
 # Calculate 
@@ -109,8 +101,8 @@ drop_group <-
 
 if (!is.null(drop_group)) {
   sim_df %<>%
-    sim_filter(metadata, filter_drop = drop_group, filter_side = "left") %>%
-    sim_filter(metadata, filter_drop = drop_group, filter_side = "right")
+    sim_filter(filter_drop = drop_group, filter_side = "left") %>%
+    sim_filter(filter_drop = drop_group, filter_side = "right")
 }
 ```
 
@@ -141,7 +133,6 @@ all_same_cols_ref <-
 ref <-
   sim_df %>%
   sim_all_same_keep_some(
-    metadata,
     all_same_cols_ref,
     filter_keep_right = reference,
     drop_reference = drop_reference,
@@ -179,7 +170,6 @@ any_different_cols_group <-
 rep_group <-
   sim_df %>%
   sim_some_different_drop_some(
-    metadata,
     any_different_cols = any_different_cols_group,
     all_same_cols = all_same_cols_group)
 ```
@@ -209,10 +199,9 @@ all_same_cols_rep <-
 
 rep <-
   sim_df %>%
-  sim_filter(metadata, filter_drop = reference, filter_side = "left") %>%
-  sim_filter(metadata, filter_drop = reference, filter_side = "right") %>%
-  sim_all_same(metadata,
-               all_same_cols_rep,
+  sim_filter(filter_drop = reference, filter_side = "left") %>%
+  sim_filter(filter_drop = reference, filter_side = "right") %>%
+  sim_all_same(all_same_cols_rep,
                annotation_cols,
                drop_lower = FALSE)
 ```
@@ -243,10 +232,9 @@ all_same_cols_rep_ref <-
 
 rep_ref <-
   sim_df %>%
-  sim_filter(metadata, filter_keep = reference, filter_side = "left") %>%
-  sim_filter(metadata, filter_keep = reference, filter_side = "right") %>%
+  sim_filter(filter_keep = reference, filter_side = "left") %>%
+  sim_filter(filter_keep = reference, filter_side = "right") %>%
   sim_all_same(
-    metadata,
     all_same_cols_rep_ref,
     annotation_cols = all_same_cols_rep_ref,
     drop_lower = FALSE
@@ -296,7 +284,6 @@ if (drop_reference) {
 nonrep <-
   sim_df %>%
   sim_some_different_drop_some(
-    metadata,
     any_different_cols = any_different_cols_non_rep,
     all_same_cols = all_same_cols_non_rep,
     all_different_cols = all_different_cols_non_rep,
@@ -390,7 +377,6 @@ stopifnot(
 nonrep_annotated <-
   nonrep %>%
   sim_annotate(
-    metadata,
     annotation_cols = c(annotation_cols, "Metadata_Plate", "Metadata_Well"),
     index = "both"
   )
@@ -439,7 +425,6 @@ stopifnot(
 repgroup_annotated <-
   rep_group %>%
   sim_annotate(
-    metadata,
     annotation_cols = annotation_cols,
     index = "both"
   )
@@ -497,7 +482,6 @@ rep %>%
 repgroup_annotated <-
   rep_group %>%
   sim_annotate(
-    metadata,
     annotation_cols = annotation_cols,
     index = "left"
   )
@@ -601,8 +585,7 @@ ref %>%
 ```{r}
 nonrep_annotated <-
   nonrep %>%
-  sim_annotate(metadata,
-               annotation_cols = c(annotation_cols),
+  sim_annotate(annotation_cols = c(annotation_cols),
                index = "left")
 
 nonrep_annotated %>%
