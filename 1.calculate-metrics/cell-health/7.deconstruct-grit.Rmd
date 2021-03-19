@@ -34,22 +34,11 @@ set.seed(42)
 # (See chunk 4)
 
 profiles <- read_csv("data/cell_health_merged_feature_select.csv.gz")
-
-metadata <- get_annotation(profiles)
 ```
 
 
 ```{r}
-if (file.exists("data/sim.parquet")) {
-  message("Loading existing similarity file...")
-  sim_df <- arrow::read_parquet("data/sim.parquet")
-
-} else {
-  sim_df <- sim_calculate(profiles)
-  sim_df %>% arrow::write_parquet("data/sim.parquet")
-}
-
-#sim_df <- sim_calculate(profiles)
+sim_df <- sim_calculate(profiles)
 ```
 
 # Compute similarity sets
@@ -181,7 +170,6 @@ annotation_cols <-
 munged_sim <-
   sim_munge(
     sim_df,
-    metadata,
     reference,
     all_same_cols_rep = all_same_cols_rep,
     all_same_cols_rep_ref = all_same_cols_rep_ref,
@@ -478,11 +466,6 @@ cutting_controls <- data.frame(
   Metadata_cell_line = c("A549", "A549", "A549"),
   Metadata_gene_name = c("Chr2", "Luc", "LacZ")
 )
-
-metadata <- 
-  profiles %>%
-  select(matches("Metadata")) %>% 
-  select(-Metadata_WellCol, -Metadata_WellRow)
 
 features <- function(df) t(as.matrix(df %>% select(-matches("^Metadata_"))))
 
