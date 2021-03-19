@@ -44,14 +44,7 @@ variables <- drop_annotation(profiles)
 
 
 ```{r}
-if (file.exists("data/sim.parquet")) {
-  message("Loading existing similarity file...")
-  sim_df <- arrow::read_parquet("data/sim.parquet")
-
-} else {
-  sim_df <- sim_calculate(profiles)
-  sim_df %>% arrow::write_parquet("data/sim.parquet")
-}
+sim_df <- sim_calculate(profiles)
 ```
 # Inspect data
 
@@ -401,7 +394,6 @@ annotation_cols <-
 munged_sim <-
   sim_munge(
     sim_df,
-    metadata,
     reference,
     all_same_cols_rep = all_same_cols_rep,
     all_same_cols_rep_ref = all_same_cols_rep_ref,
