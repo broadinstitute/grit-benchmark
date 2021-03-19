@@ -491,8 +491,7 @@ sim_all_same <-
     
     if (!is.null(annotation_cols)) {
       sim_df %<>%
-        sim_annotate(metadata,
-                     annotation_cols,
+        sim_annotate(annotation_cols,
                      index = "left")
     }
     
@@ -545,26 +544,22 @@ sim_all_same_keep_some <-
     stopifnot(!is.null(metadata))
     
     sim_df %<>%
-      sim_all_same(metadata,
-                   all_same_cols) %>%
-      sim_filter(metadata,
-                 filter_keep = filter_keep_right,
+      sim_all_same(all_same_cols) %>%
+      sim_filter(filter_keep = filter_keep_right,
                  filter_side = "right")
     
     if (drop_reference) {
       filter_drop_left <- filter_keep_right
       
       sim_df %<>%
-        sim_filter(metadata,
-                   filter_drop = filter_drop_left,
+        sim_filter(filter_drop = filter_drop_left,
                    filter_side = "left")
     }
     
     if (!is.null(annotation_cols)) {
       sim_df %<>%
         dplyr::select(dplyr::all_of(sim_cols)) %>%
-        sim_annotate(metadata,
-                     annotation_cols,
+        sim_annotate(annotation_cols,
                      index = "left")
       
     }
@@ -612,18 +607,17 @@ sim_all_same_keep_some <-
 #' @export
 sim_some_different_drop_some <-
   function(sim_df,
-           metadata,
            any_different_cols,
            all_same_cols = NULL,
            all_different_cols = NULL,
            filter_drop_left = NULL,
            filter_drop_right = NULL,
            annotation_cols = NULL) {
-    stopifnot(!any(all_same_cols %in% all_different_cols))
-    
     metadata <- attr(sim_df, "row_metadata")
     
     stopifnot(!is.null(metadata))
+    
+    stopifnot(!any(all_same_cols %in% all_different_cols))
     
     metadata_i <- metadata
     
@@ -721,8 +715,7 @@ sim_some_different_drop_some <-
     # add annotations
     if (!is.null(annotation_cols)) {
       sim_df %<>%
-        sim_annotate(metadata,
-                     annotation_cols,
+        sim_annotate(annotation_cols,
                      index = "left")
     }
     
@@ -839,8 +832,8 @@ sim_munge <-
     
     if (!is.null(drop_group)) {
       sim_df %<>%
-        sim_filter(metadata, filter_drop = drop_group, filter_side = "left") %>%
-        sim_filter(metadata, filter_drop = drop_group, filter_side = "right")
+        sim_filter(filter_drop = drop_group, filter_side = "left") %>%
+        sim_filter(filter_drop = drop_group, filter_side = "right")
       
     }
     
@@ -875,7 +868,6 @@ sim_munge <-
       ref <-
         sim_df %>%
         sim_all_same_keep_some(
-          metadata,
           all_same_cols_ref,
           filter_keep_right = reference,
           drop_reference = drop_reference,
@@ -897,10 +889,9 @@ sim_munge <-
     
     rep <-
       sim_df %>%
-      sim_filter(metadata, filter_drop = reference, filter_side = "left") %>%
-      sim_filter(metadata, filter_drop = reference, filter_side = "right") %>%
-      sim_all_same(metadata,
-                   all_same_cols_rep,
+      sim_filter(filter_drop = reference, filter_side = "left") %>%
+      sim_filter(filter_drop = reference, filter_side = "right") %>%
+      sim_all_same(all_same_cols_rep,
                    annotation_cols,
                    drop_lower = FALSE)
     
@@ -919,14 +910,11 @@ sim_munge <-
     if (fetch_rep_ref) {
       rep_ref <-
         sim_df %>%
-        sim_filter(metadata,
-                   filter_keep = reference,
+        sim_filter(filter_keep = reference,
                    filter_side = "left") %>%
-        sim_filter(metadata,
-                   filter_keep = reference,
+        sim_filter(filter_keep = reference,
                    filter_side = "right") %>%
         sim_all_same(
-          metadata,
           all_same_cols = all_same_cols_rep_ref,
           annotation_cols = annotation_cols,
           drop_lower = FALSE
@@ -957,7 +945,6 @@ sim_munge <-
       non_rep <-
         sim_df %>%
         sim_some_different_drop_some(
-          metadata,
           any_different_cols = any_different_cols_non_rep,
           all_same_cols = all_same_cols_non_rep,
           all_different_cols = all_different_cols_non_rep,
@@ -990,7 +977,6 @@ sim_munge <-
       rep_group <-
         sim_df %>%
         sim_some_different_drop_some(
-          metadata,
           any_different_cols = any_different_cols_group,
           all_same_cols = all_same_cols_group,
           filter_drop_left = reference_both,
@@ -1188,10 +1174,9 @@ sim_metrics <- function(munged_sim,
 #'   x4 = rnorm(100),
 #'   x5 = rnorm(100)
 #' )
-#' metadata <- simplyr::get_annotation(population)
 #' annotation_cols <- c("Metadata_group", "Metadata_type")
 #' sim_df <- simplyr::sim_calculate(population, method = "pearson")
-#' sim_df <- simplyr::sim_annotate(sim_df, metadata, annotation_cols)
+#' sim_df <- simplyr::sim_annotate(sim_df, annotation_cols)
 #' annotation_column <- "Metadata_group"
 #' simplyr::sim_plot(sim_df, annotation_column)
 #' @export
@@ -1281,7 +1266,7 @@ sim_plot <-
 #' metadata <- simplyr::get_annotation(population)
 #' annotation_cols <- c("Metadata_group", "Metadata_type")
 #' sim_df <- simplyr::sim_calculate(population, method = "pearson")
-#' sim_df <- simplyr::sim_annotate(sim_df, metadata, annotation_cols)
+#' sim_df <- simplyr::sim_annotate(sim_df, annotation_cols)
 #' annotation_column <- "Metadata_group"
 #' primary_key_column <- "Metadata_id"
 #' res <- simplyr::sim_wider(sim_df, annotation_column, primary_key_column)
