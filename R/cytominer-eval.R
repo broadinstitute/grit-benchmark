@@ -201,7 +201,7 @@ sim_write <- function(sim_df, output, file_format = "parquet") {
 
     futile.logger::flog.info(glue::glue("Writing {output} ..."))
     
-    sim_df %>% arrow::write_parquet(output)
+    sim_df %>% arrow::write_parquet(output, compression = "gzip", compression_level = 9)
     
   }
   
