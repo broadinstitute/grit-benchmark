@@ -205,7 +205,7 @@ sim_write <- function(sim_df, output, file_format = "parquet") {
     
   }
   
-  sim_df
+  NULL
 
 }
 
