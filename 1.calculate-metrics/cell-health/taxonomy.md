@@ -1,4 +1,4 @@
-# Similarity Metrics Taxonomy
+# Self-similarity Metrics Taxonomy
 
 The similarity matrix represents a graph with vertices and edges.
 
@@ -8,7 +8,7 @@ Each vertex belongs to 3 nested sets
 -   Level 1 "replicate" set - e.g. replicates of the same perturbation
 -   Level 2 "group replicate" set e.g. replicates of perturbations with same MOA
 
-We calculate metrics hierarchically
+We calculate self-similarity metrics hierarchically
 
 -   **Level 1-0**: similarity of elements of a Level 0 (singleton) set to elements of its Level 1 (replicates) set, except elements of its Level 0 set. In simpler terms, this is a *replicate similarity of a vertex, i.e. the* *similarity of vertex to its replicates (except itself)*. This is a **Level 0** (singleton) set metric.
 
@@ -18,7 +18,7 @@ We calculate metrics hierarchically
 
 -   **Level 2**: average Level 2-1 similarity across all Level 1 (replicate) sets that are nested in the Level 2 set. In simpler terms, this is the *average group replicate similarity of a set of replicate sets.* This is a a **Level 2** (group replicate) set metric.
 
-Consider an compound perturbation experiment done in replicates in a multi-well plate. Each compound belongs to one (or more) MOAs.
+Consider a compound perturbation experiment done in replicates in a multi-well plate. Each compound belongs to one (or more) MOAs.
 
 -   Each **replicate well** has a Level 1-0 metric, which is the similarity of that well to its replicates.
 
