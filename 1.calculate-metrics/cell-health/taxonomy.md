@@ -1,4 +1,4 @@
-# Self-similarity Metrics Taxonomy
+# Similarity Metrics Taxonomy
 
 The similarity matrix represents a graph with vertices and edges.
 
@@ -7,6 +7,8 @@ Each vertex belongs to 3 nested sets
 -   Level 0 "singleton" set - i.e. just itself
 -   Level 1 "replicate" set - e.g. replicates of the same perturbation
 -   Level 2 "group replicate" set e.g. replicates of perturbations with same MOA
+
+## Self-similarity metrics 
 
 We calculate self-similarity metrics – numbers that report similarity within these sets – hierarchically:
 
