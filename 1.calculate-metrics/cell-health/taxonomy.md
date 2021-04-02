@@ -8,7 +8,7 @@ Each vertex belongs to 3 nested sets
 -   Level 1 "replicate" set - e.g. replicates of the same perturbation
 -   Level 2 "group replicate" set e.g. replicates of perturbations with same MOA
 
-We calculate self-similarity metrics hierarchically
+We calculate self-similarity metrics – numbers that report similarity within these sets – hierarchically:
 
 -   **Level 1-0**: similarity of elements of a Level 0 (singleton) set to elements of its Level 1 (replicates) set, except elements of its Level 0 set. In simpler terms, this is a *replicate similarity of a vertex, i.e. the* *similarity of vertex to its replicates (except itself)*. This is a **Level 0** (singleton) set metric.
 
