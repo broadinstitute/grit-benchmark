@@ -10,10 +10,12 @@ Each vertex belongs to 3 nested sets
 
 We calculate two different categories of metrics:
 
-1. Self-similarity metrics – numbers that report similarity within these sets 
-2. Cross-similarity metrics – numbers that report similarity across these sets
+1. Self-similarity metrics – numbers that report similarity within these sets (e.g. computing within a Level 2 set will give a number for that set, e.g. the self-similarity of an MOA class)
+2. Cross-similarity metrics – numbers that report similarity across these sets.
 
-(_Self-similarity_ sounds better than _Auto-similarity_, although the latter is more consistent with stats e.g. autocorrelation and cross-correlation)
+Notes: 
+- _Self-similarity_ sounds better than _Auto-similarity_, although the latter is more consistent with stats e.g. autocorrelation and cross-correlation
+- It is possible we don't need to think in terms of two categories because maybe the self-similarity can subsume cross-similarity
 
 ## Self-similarity metrics 
 
