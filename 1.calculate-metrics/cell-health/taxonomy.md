@@ -8,6 +8,13 @@ Each vertex belongs to 3 nested sets
 -   Level 1 "replicate" set - e.g. replicates of the same perturbation
 -   Level 2 "group replicate" set e.g. replicates of perturbations with same MOA
 
+We calculate two different categories of metrics:
+
+1. Self-similarity metrics – numbers that report similarity within these sets 
+2. Cross-similarity metrics – numbers that report similarity across these sets
+
+(_Self-similarity_ sounds better than _Auto-similarity_, although the latter is more consistent with stats e.g. autocorrelation and cross-correlation)
+
 ## Self-similarity metrics 
 
 We calculate self-similarity metrics – numbers that report similarity within these sets – hierarchically:
