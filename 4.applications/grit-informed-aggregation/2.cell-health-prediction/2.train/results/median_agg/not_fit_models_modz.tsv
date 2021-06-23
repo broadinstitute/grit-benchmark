@@ -1,0 +1,13 @@
+target	y_transform	shuffle
+cc_all_nucleus_roundness_mean	binarize	True
+cc_all_nucleus_roundness_mean	binarize	False
+cc_cc_late_mitosis	binarize	True
+cc_cc_late_mitosis	binarize	False
+vb_live_cell_roundness	binarize	True
+vb_live_cell_roundness	binarize	False
+vb_live_cell_width_length	binarize	True
+vb_live_cell_width_length	binarize	False
+vb_num_live_cells	binarize	True
+vb_num_live_cells	binarize	False
+vb_percent_live	binarize	True
+vb_percent_live	binarize	False
