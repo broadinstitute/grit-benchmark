@@ -2,10 +2,14 @@
 # coding: utf-8
 
 # # Evaluating aggregated profiles
+#
+# We evaluate the well-aggregated profiles by replicate reproducibility via:
+# 1. cytominer-eval package
+# 2. workflow adapted from *https://github.com/jump-cellpainting/workflow_demo_analysis/blob/main/analysis_Broad/0.percent_scores.ipynb*
 
 # ## Calculate replicate reproducibility
 
-# In[2]:
+# In[1]:
 
 
 import os
@@ -28,20 +32,24 @@ from scripts.utils import calculate_weighted_agg
 import scripts.eval_utils as utils
 
 
-# In[3]:
+# In[2]:
 
 
 input_folder = "data/aggregated-profiles/"
 results_folder = "results/"
 
+df_list = [pd.read_csv(file, sep="\t") for file in glob.glob(input_folder + "*.tsv")]
+concat_df = pd.concat(df_list, axis="rows", sort=False)
+print(concat_df.shape)
 
-# In[4]:
+
+# In[3]:
 
 
 get_ipython().run_cell_magic(
     "time",
     "",
-    "\ndf_list = [pd.read_csv(file, sep='\\t') for file in glob.glob(input_folder+'*.tsv')] # for the FULL set of normalized profiles\nconcat_df = pd.concat(df_list, axis='rows', sort=False)\nprint(concat_df.shape)\n\n# save the results\n# replicate correlation at the guide-level\nf_guide_cor_list = []\nf_guide_df_list = []\n# replicate correlation at the gene-level\nf_gene_cor_list = []\nf_gene_df_list = []\n# method list\nmethod_list = []\n# cell_line list\ncell_list = []\n\nfor method in concat_df.Metadata_agg_method.unique():\n    for cell_line in concat_df.Metadata_cell_line.unique():\n        print(f\"method is {method}, cell line is {cell_line}\")\n        sub_df = concat_df.query(\"Metadata_agg_method == @method & Metadata_cell_line == @cell_line\")\n\n        # guide-level replicate correlation\n        f_guide_cor_val, f_guide_cor_df = evaluate(\n            profiles = sub_df,\n            features = infer_cp_features(sub_df),\n            meta_features = infer_cp_features(sub_df, metadata=True),\n            replicate_groups=['Metadata_pert_name', 'Metadata_gene_name', 'Metadata_cell_line', 'Metadata_agg_method'], \n            operation = 'replicate_reproducibility',\n            similarity_metric = 'pearson',\n        #         replicate_reproducibility_quantile = 0.99,\n            replicate_reproducibility_return_median_cor = True\n                                  )\n        f_guide_cor_list.append(f_guide_cor_val)\n        f_guide_df_list.append(f_guide_cor_df)    \n    \n        # gene-level replicate correlation\n        f_gene_cor_val, f_gene_cor_df = evaluate(\n            profiles = sub_df,\n            features = infer_cp_features(sub_df),\n            meta_features = infer_cp_features(sub_df, metadata=True),\n            replicate_groups=['Metadata_gene_name', 'Metadata_cell_line', 'Metadata_agg_method'],\n            operation = 'replicate_reproducibility',\n            similarity_metric = 'pearson',\n        #         replicate_reproducibility_quantile= 0.99,\n            replicate_reproducibility_return_median_cor = True\n                                  )\n        f_gene_cor_list.append(f_gene_cor_val)\n        f_gene_df_list.append(f_gene_cor_df)\n        \n        method_list.append(method)\n        cell_list.append(cell_line)\n\nguide_rep_cors = pd.concat(f_guide_df_list)\ngene_rep_cors = pd.concat(f_gene_df_list)",
+    "\n# save the results\n# replicate correlation at the guide-level\nf_guide_cor_list = []\nf_guide_df_list = []\n# replicate correlation at the gene-level\nf_gene_cor_list = []\nf_gene_df_list = []\n# method list\nmethod_list = []\n# cell_line list\ncell_list = []\n\nfor method in concat_df.Metadata_agg_method.unique():\n    for cell_line in concat_df.Metadata_cell_line.unique():\n        print(f\"method is {method}, cell line is {cell_line}\")\n        sub_df = concat_df.query(\"Metadata_agg_method == @method & Metadata_cell_line == @cell_line\")\n\n        # guide-level replicate correlation\n        f_guide_cor_val, f_guide_cor_df = evaluate(\n            profiles = sub_df,\n            features = infer_cp_features(sub_df),\n            meta_features = infer_cp_features(sub_df, metadata=True),\n            replicate_groups=['Metadata_pert_name', 'Metadata_gene_name', 'Metadata_cell_line', 'Metadata_agg_method'], \n            operation = 'replicate_reproducibility',\n            similarity_metric = 'pearson',\n        #         replicate_reproducibility_quantile = 0.99,\n            replicate_reproducibility_return_median_cor = True\n                                  )\n        f_guide_cor_list.append(f_guide_cor_val)\n        f_guide_df_list.append(f_guide_cor_df)    \n    \n        # gene-level replicate correlation\n        f_gene_cor_val, f_gene_cor_df = evaluate(\n            profiles = sub_df,\n            features = infer_cp_features(sub_df),\n            meta_features = infer_cp_features(sub_df, metadata=True),\n            replicate_groups=['Metadata_gene_name', 'Metadata_cell_line', 'Metadata_agg_method'],\n            operation = 'replicate_reproducibility',\n            similarity_metric = 'pearson',\n        #         replicate_reproducibility_quantile= 0.99,\n            replicate_reproducibility_return_median_cor = True\n                                  )\n        f_gene_cor_list.append(f_gene_cor_val)\n        f_gene_df_list.append(f_gene_cor_df)\n        \n        method_list.append(method)\n        cell_list.append(cell_line)\n\nguide_rep_cors = pd.concat(f_guide_df_list)\ngene_rep_cors = pd.concat(f_gene_df_list)",
 )
 
 
@@ -154,14 +162,15 @@ gene_rep_cors.to_csv(
 
 
 # ## Calculate percent replicating and percent matching
+# *reference: https://github.com/jump-cellpainting/workflow_demo_analysis/blob/main/analysis_Broad/0.percent_scores.ipynb*
 
-# In[12]:
+# In[8]:
 
 
 random.seed(9000)
 
 n_samples = 1000  # Number of points to sample from the null distribution.
-n_replicates = 2  # Number of replicates of each sample.
+n_replicates = 6  # Number of replicates of each sample.
 
 replicate_grouping_feature = "Metadata_pert_name"
 class_grouping_feature = "Metadata_gene_name"
@@ -173,7 +182,7 @@ class_grouping_feature = "Metadata_gene_name"
 # 1. high pairwise (pearson) correlation w/ each other
 # 2. median replicate correlation is "significantly different" (aka perturbation with median replicate correlation greater than 95th percentile) from null distribution (pairwise correlations of non-replicates)
 
-# In[13]:
+# In[9]:
 
 
 get_ipython().run_cell_magic(
@@ -183,7 +192,7 @@ get_ipython().run_cell_magic(
 )
 
 
-# In[14]:
+# In[10]:
 
 
 display(corr_replicating_df)
@@ -196,7 +205,7 @@ display(corr_replicating_df)
 # In this case, the null distribution is constructed from the pairwise correlations of compounds that belong to different MOA classes or target different genes.
 #
 
-# In[15]:
+# In[11]:
 
 
 get_ipython().run_cell_magic(
@@ -206,13 +215,13 @@ get_ipython().run_cell_magic(
 )
 
 
-# In[16]:
+# In[12]:
 
 
 display(corr_matching_df)
 
 
-# In[17]:
+# In[13]:
 
 
 guide_sub = corr_replicating_df.drop(
@@ -244,7 +253,7 @@ merged_df[
 
 # #### Save outputs
 
-# In[18]:
+# In[14]:
 
 
 corr_replicating_df.to_csv(
@@ -253,6 +262,3 @@ corr_replicating_df.to_csv(
 corr_matching_df.to_csv(
     Path(results_folder + "percent_matching.tsv"), index=False, sep="\t"
 )
-
-
-# In[ ]:

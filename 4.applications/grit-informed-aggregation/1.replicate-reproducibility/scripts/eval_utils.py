@@ -17,6 +17,7 @@ def get_metadata(df):
     return df[infer_cp_features(df, metadata=True)]
 
 
+#### the following functions are modified from original functions written by Niranj Chandrasekaran ####
 def percent_score(null_dist, corr_dist, how):
     """
     Calculates the Percent strong or percent recall scores

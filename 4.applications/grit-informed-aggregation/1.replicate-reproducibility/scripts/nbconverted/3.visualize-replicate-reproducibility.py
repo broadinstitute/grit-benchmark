@@ -2,6 +2,7 @@
 # coding: utf-8
 
 # # Visualize replicate reproducibility metrics
+# plots adapted from *https://github.com/jump-cellpainting/workflow_demo_analysis/blob/main/analysis_Broad/0.percent_scores.ipynb*
 
 # In[1]:
 
@@ -150,6 +151,3 @@ for i in range(n_experiments):
     sns.despine()
 plt.tight_layout()
 plt.savefig(Path(figures_folder + "percent_matching.png"))
-
-
-# In[ ]:
