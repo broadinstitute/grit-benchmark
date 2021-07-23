@@ -712,11 +712,15 @@ target_distributions <-
 
 
 ```{r}
+# Output data
 for (type in unique(target_distributions$type)) {
   target_distributions %>%
     filter(type == {{type}}) %>% 
     write_csv(glue::glue("~/Desktop/{type}.csv"))
 }
+
+# Output full data
+target_distributions %>% readr::write_csv(file.path("data", "grit_deconstructed.csv.gz"))
 ```
 
 
