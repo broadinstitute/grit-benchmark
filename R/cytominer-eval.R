@@ -1,0 +1,1364 @@
+sim_cols <- c("id1", "id2", "sim")
+
+#' Get row annotations.
+#'
+#' \code{get_annotation} gets row annotations.
+#'
+#' @param population tbl with annotations (a.k.a. metadata) and observation variables.
+#' @param annotation_prefix optional character string specifying prefix for annotation columns (e.g. \code{"Metadata_"} (default)).
+#'
+#' @return row annotations of the same class as \code{population}
+#' @export
+#'
+#' @importFrom magrittr %>%
+#'
+#'
+#' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = c(
+#'     "control", "control", "control", "control",
+#'     "experiment", "experiment", "experiment", "experiment"
+#'   ),
+#'   Metadata_batch = c("a", "a", "b", "b", "a", "a", "b", "b"),
+#'   AreaShape_Area = c(10, 12, 15, 16, 8, 8, 7, 7)
+#' )
+#' simplyr::get_annotation(population, annotation_prefix = "Metadata_")
+#' @export
+get_annotation <-
+  function(population,
+           annotation_prefix = "Metadata_") {
+    population %>%
+      dplyr::select(dplyr::matches(annotation_prefix)) %>%
+      dplyr::mutate(id = seq(nrow(population))) %>%
+      dplyr::select(id, dplyr::everything())
+  }
+
+
+#' Drop row annotations.
+#'
+#' \code{drop_annotation} drops row annotations.
+#'
+#' @param population tbl with annotations (a.k.a. metadata) and observation variables.
+#' @param annotation_prefix optional character string specifying prefix for annotation columns (e.g. \code{"Metadata_"} (default)).
+#'
+#' @return data with all columns except row annotations of the same class as \code{population}
+#' @export
+#'
+#' @importFrom magrittr %>%
+#'
+#' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = c(
+#'     "control", "control", "control", "control",
+#'     "experiment", "experiment", "experiment", "experiment"
+#'   ),
+#'   Metadata_batch = c("a", "a", "b", "b", "a", "a", "b", "b"),
+#'   AreaShape_Area = c(10, 12, 15, 16, 8, 8, 7, 7)
+#' )
+#' simplyr::drop_annotation(population, annotation_prefix = "Metadata_")
+#' @export
+drop_annotation <-
+  function(population,
+           annotation_prefix = "Metadata_") {
+    population %>%
+      dplyr::select(-dplyr::matches(annotation_prefix))
+  }
+
+#' Calculate melted similarity matrix.
+#'
+#' \code{sim_calculate} calculates a melted similarity matrix.
+#'
+#' @param population tbl with annotations (a.k.a. metadata) and observation variables.
+#' @param annotation_prefix optional character string specifying prefix for annotation columns.
+#' @param method optional character string specifying method for \code{stats::cor} to calculate similarity.  This must be one of the strings \code{"pearson"} (default), \code{"kendall"}, \code{"spearman"}.
+#'
+#' @return data.frame of melted similarity matrix.
+#'
+#' @importFrom magrittr %>%
+#' @importFrom magrittr %<>%
+#'
+#' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = sample(c("a", "b"), 4, replace = TRUE),
+#'   x = rnorm(4),
+#'   y = x + rnorm(4) / 100,
+#'   z = y + rnorm(4) / 1000
+#' )
+#' simplyr::sim_calculate(population, method = "pearson")
+#' @export
+sim_calculate <-
+  function(population,
+           annotation_prefix = "Metadata_",
+           method = "pearson") {
+    # get data matrix
+    data_matrix <-
+      population %>%
+      dplyr::select(-dplyr::matches(annotation_prefix))
+    
+    # get metadata
+    metadata <-
+      population %>%
+      dplyr::select(dplyr::matches(annotation_prefix)) %>%
+      tibble::rowid_to_column(var = "id")
+    
+    # measure similarities between treatments
+    stopifnot(method %in% c("pearson", "kendall", "spearman"))
+    
+    sim_df <- stats::cor(t(data_matrix), method = method)
+    
+    colnames(sim_df) <- seq(1, ncol(sim_df))
+    
+    sim_df %<>%
+      tibble::as_tibble() %>%
+      tibble::rowid_to_column(var = "id1") %>%
+      tidyr::pivot_longer(-id1, names_to = "id2", values_to = "sim") %>%
+      dplyr::mutate(id2 = as.integer(id2)) %>%
+      dplyr::filter(id1 != id2)
+    
+    attr(sim_df, "metric_metadata") <- list(method = method)
+    
+    attr(sim_df, "row_metadata") <- metadata
+    
+    sim_df
+  }
+
+
+#' Write similarity matrix.
+#'
+#' \code{sim_write} writes similarity matrix.
+#'
+#' The output format can be either CSV or Parquet.
+#'
+#' With the CSV format, the \code{row_metadata} and \code{metric_metadata}
+#' attributes are saved as separate files.
+#'
+#' This is not required for Parquet because it saves the attributes as well.
+#'
+#' @param sim_df tbl with melted similarity matrix.
+#' @param output character string specifying the output directory or filename.
+#' @param file_format character string specify file format. This must be one of \code{csv} or \code{parquet}(default).
+#'
+#' @return \code{sim_df}.
+#' @export
+#'
+#' @importFrom magrittr %>%
+#'
+#' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = sample(c("a", "b"), 4, replace = TRUE),
+#'   x = rnorm(4),
+#'   y = x + rnorm(4) / 100,
+#'   z = y + rnorm(4) / 1000
+#' )
+#' sim_df <- simplyr::sim_calculate(population, method = "pearson")
+#' sim_df %>% simplyr::sim_write("/tmp/test", file_format = "csv")
+#' readr::read_csv("/tmp/test/test.csv")
+#' readr::read_csv("/tmp/test/test_metadata.csv")
+#' jsonlite::read_json("/tmp/test/test_metadata.json")
+#' sim_df %>% simplyr::sim_write("/tmp/test.parquet")
+#' sim_df_in <- arrow::read_parquet("/tmp/test.parquet")
+#' attr(sim_df_in, "row_metadata")
+#' attr(sim_df_in, "metric_metadata")
+#' @export
+sim_write <- function(sim_df, output, file_format = "parquet") {
+  stopifnot(!is.null(attr(sim_df, "row_metadata")))
+  
+  stopifnot(!is.null(attr(sim_df, "metric_metadata")))
+  
+  if (file_format == "csv") {
+    futile.logger::flog.info(glue::glue("Creating {output} ..."))
+    dir.create(output, showWarnings = FALSE)
+    
+    sim_filename <- paste(basename(output), file_format, sep = ".")
+
+    row_metadata_filename <-
+      paste(paste0(basename(output), "_metadata"), file_format, sep = ".")
+    
+    metric_metadata_filename <-
+      paste(paste0(basename(output), "_metadata"), "json", sep = ".")
+    
+    sim_filename %<>% file.path(output, .)
+    row_metadata_filename %<>% file.path(output, .)
+    metric_metadata_filename %<>% file.path(output, .)
+
+    futile.logger::flog.info(glue::glue("Writing {sim_filename} ..."))
+    
+    sim_df %>% readr::write_csv(sim_filename)
+    
+    futile.logger::flog.info(glue::glue("Writing {row_metadata_filename} ..."))
+    
+    attr(sim_df, "row_metadata") %>% readr::write_csv(row_metadata_filename)
+    
+    futile.logger::flog.info(glue::glue("Writing {metric_metadata_filename} ..."))
+    
+    attr(sim_df, "metric_metadata") %>% jsonlite::write_json(metric_metadata_filename)
+    
+  } else {
+
+    futile.logger::flog.info(glue::glue("Writing {output} ..."))
+    
+    sim_df %>% arrow::write_parquet(output, compression = "gzip", compression_level = 9)
+    
+  }
+  
+  NULL
+
+}
+
+
+#' Read similarity matrix.
+#'
+#' \code{sim_read} reads similarity matrix.
+#' 
+#' With the CSV format, the \code{row_metadata} and \code{metric_metadata}
+#' attributes are read in and added as attributes to the \code{sim_df} tbl.
+#'
+#' This is not required for Parquet because it the attributes are saved. 
+#' For Parquet format, \code{sim_read} is identical to 
+#' \code{arrow::read_parquet}
+#'
+#' @param input character string specifying the input filename or directory.
+#'
+#' @return tbl with similarity matrix.
+#' @export
+#'
+#' @importFrom magrittr %>%
+#' @importFrom magrittr %<>%
+#'
+#' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = sample(c("a", "b"), 4, replace = TRUE),
+#'   x = rnorm(4),
+#'   y = x + rnorm(4) / 100,
+#'   z = y + rnorm(4) / 1000
+#' )
+#' sim_df <- sim_calculate(population, method = "pearson")
+#' sim_df %>% sim_write("/tmp/test", file_format = "csv")
+#' sim_df_csv <- sim_read("/tmp/test", file_format = "csv")
+#' sim_df %>% sim_write("/tmp/test.parquet")
+#' sim_df_parquet1 <- sim_read("/tmp/test.parquet")
+#' sim_df %>% arrow::write_parquet("/tmp/test.parquet")
+#' sim_df_parquet2 <- arrow::read_parquet("/tmp/test.parquet")
+#' all(sim_df_parquet1 == sim_df_parquet2)
+#' all(sim_df_parquet1 == sim_df_csv)
+#' @export
+sim_read <- function(input, file_format = "parquet") {
+  
+  stopifnot(file_format %in% c("csv", "parquet"))
+  
+  if (file_format == "csv") {
+    sim_filename <- 
+      paste(basename(input), "csv", sep = ".")
+    
+    row_metadata_filename <-
+      paste(paste0(basename(input), "_metadata"), file_format, sep = ".")
+    
+    metric_metadata_filename <-
+      paste(paste0(basename(input), "_metadata"), "json", sep = ".")
+    
+    sim_filename %<>% file.path(input, .)
+    row_metadata_filename %<>% file.path(input, .)
+    metric_metadata_filename %<>% file.path(input, .)
+
+    stopifnot(file.exists(sim_filename) &&
+                file.exists(row_metadata_filename) &&
+                file.exists(metric_metadata_filename))
+    
+    futile.logger::flog.info(glue::glue("Reading {sim_filename} ..."))
+    
+    sim_df <- readr::read_csv(sim_filename)
+    
+    futile.logger::flog.info(glue::glue("Reading {row_metadata_filename} ..."))
+    
+    attr(sim_df, "row_metadata") <- readr::read_csv(row_metadata_filename)
+    
+    futile.logger::flog.info(glue::glue("Reading {metric_metadata_filename} ..."))
+    
+    attr(sim_df, "metric_metadata") <-
+      jsonlite::read_json(metric_metadata_filename)    
+    
+  } else {
+
+    sim_df <- arrow::read_parquet(input)
+    
+  }
+
+  stopifnot(!is.null(attr(sim_df, "row_metadata")) &&
+              !is.null(attr(sim_df, "metric_metadata")))
+  
+  sim_df
+}
+
+#' Annotate melted similarity matrix.
+#'
+#' \code{sim_annotate} annotates a melted similarity matrix.
+#'
+#' @param sim_df tbl with melted similarity matrix.
+#' @param annotation_cols character vector specifying annotation columns.
+#' @param index optional character string specifying whether to annotate left index, right index, or both.  This must be one of the strings \code{"both"} (default), \code{"left"}, \code{"right"}.
+#'
+#' @return annotated melted similarity matrix of the same class as \code{sim_df}.
+#'
+#' @importFrom magrittr %>%
+#' @importFrom magrittr %<>%
+#'
+#' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = sample(c("a", "b"), 4, replace = TRUE),
+#'   Metadata_type = sample(c("x", "y"), 4, replace = TRUE),
+#'   x = rnorm(4),
+#'   y = x + rnorm(4) / 100,
+#'   z = y + rnorm(4) / 1000
+#' )
+#' annotation_cols <- c("Metadata_group")
+#' sim_df <- simplyr::sim_calculate(population, method = "pearson")
+#' simplyr::sim_annotate(sim_df, annotation_cols)
+#' @export
+sim_annotate <-
+  function(sim_df,
+           annotation_cols,
+           index = "both") {
+    metadata <- attr(sim_df, "row_metadata")
+    
+    stopifnot(!is.null(metadata))
+    
+    metadata_i <-
+      metadata %>%
+      select(id, any_of(annotation_cols))
+    
+    sim_df %<>% dplyr::select(dplyr::all_of(sim_cols))
+    
+    if (index == "left") {
+      sim_df %<>%
+        inner_join(metadata_i,
+                   by = c("id1" = "id"),
+                   suffix = c("1", "2"))
+    }
+    
+    if (index == "right") {
+      sim_df %<>%
+        inner_join(metadata_i,
+                   by = c("id2" = "id"),
+                   suffix = c("1", "2"))
+    }
+    
+    if (index == "both") {
+      sim_df %<>%
+        inner_join(metadata_i,
+                   by = c("id1" = "id")) %>%
+        inner_join(metadata_i,
+                   by = c("id2" = "id"),
+                   suffix = c("1", "2"))
+    }
+    
+    sim_df
+    
+  }
+
+#' Filter rows of the melted similarity matrix.
+#'
+#' \code{sim_filter} filters rows of the melted similarity matrix.
+#'
+#' @param sim_df tbl with melted similarity matrix.
+#' @param filter_keep optional tbl of metadata specifying which rows to keep.
+#' @param filter_drop optional tbl of metadata specifying which rows to drop.
+#' @param filter_side character string specifying which index to filter on. This must be one of the strings \code{"left"} or \code{"right"}.
+#'
+#' @return filtered \code{sim_df} with some rows kept and some rows dropped. No filters applied if both \code{filter_keep} and \code{filter_drop} are NULL.
+#'
+#' @importFrom magrittr %>%
+#' @importFrom magrittr %<>%
+#'
+#' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = sample(c("a", "b"), 4, replace = TRUE),
+#'   Metadata_type = sample(c("x", "y"), 4, replace = TRUE),
+#'   x = rnorm(4),
+#'   y = x + rnorm(4) / 100,
+#'   z = y + rnorm(4) / 1000
+#' )
+#' annotation_cols <- c("Metadata_group", "Metadata_type")
+#' sim_df <- simplyr::sim_calculate(population, method = "pearson")
+#' sim_df <- simplyr::sim_annotate(sim_df, annotation_cols)
+#' filter_keep <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
+#' filter_drop <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
+#' simplyr::sim_filter(sim_df, filter_keep, "left")
+#' simplyr::sim_filter(sim_df, filter_drop, "left")
+#' @export
+sim_filter <-
+  function(sim_df,
+           filter_keep = NULL,
+           filter_drop = NULL,
+           filter_side = NULL) {
+    metadata <- attr(sim_df, "row_metadata")
+    
+    stopifnot(!is.null(metadata))
+    
+    stopifnot(filter_side %in% c("left", "right"))
+    
+    # if there's nothing to keep and nothing to drop, then assume there is
+    # nothing to drop
+    if (is.null(filter_drop) & is.null(filter_keep)) {
+      return(sim_df)
+    }
+    
+    join_str <- c("id")
+    
+    # join_str will be either c("id1" = "id") or c("id2" = "id")
+    names(join_str) <-
+      paste0("id", ifelse(filter_side == "left", 1, 2))
+    
+    if (!is.null(filter_keep)) {
+      filter_ids <-
+        metadata %>%
+        dplyr::inner_join(filter_keep, by = colnames(filter_keep)) %>%
+        dplyr::select(id)
+      
+      sim_df %<>%
+        dplyr::inner_join(filter_ids, by = join_str)
+    }
+    
+    if (!is.null(filter_drop)) {
+      filter_ids <-
+        metadata %>%
+        dplyr::inner_join(filter_drop, by = colnames(filter_drop)) %>%
+        dplyr::select(id)
+      
+      sim_df %<>%
+        dplyr::anti_join(filter_ids, by = join_str)
+    }
+    
+    sim_df
+    
+  }
+
+#' Filter rows of the melted similarity matrix to keep pairs with the same values in specific columns.
+#'
+#' \code{sim_all_same} Filters melted similarity matrix to keep pairs with the same values in specific columns.
+#'
+#' @param sim_df tbl with melted similarity matrix.
+#' @param all_same_cols character vector specifying columns.
+#' @param annotation_cols optional character vector specifying which columns from \code{metadata} to annotate the left index of the filtered \code{sim_df} with.
+#' @param include_group_tag optional boolean specifying whether to include an identifier for the pairs using the values in the \code{all_same_cols} columns.
+#' @param drop_lower optional boolean specifying whether to drop the pairs where the first index is smaller than the second index. This is equivalent to dropping the lower triangular of  \code{sim_df}.
+#'
+#' @return filtered \code{sim_df} where only pairs with the same values in \code{all_same_cols} columns are kept.
+#'
+#' @importFrom magrittr %>%
+#' @importFrom magrittr %<>%
+#'
+#' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' n <- 5
+#' population <- tibble::tibble(
+#'   Metadata_group = sample(c("a", "b"), n, replace = TRUE),
+#'   Metadata_type = sample(c("x", "y"), n, replace = TRUE),
+#'   x = rnorm(n),
+#'   y = x + rnorm(n) / 100,
+#'   z = y + rnorm(n) / 1000
+#' )
+#' annotation_cols <- c("Metadata_group", "Metadata_type")
+#' sim_df <- simplyr::sim_calculate(population, method = "pearson")
+#' sim_df <- simplyr::sim_annotate(sim_df, annotation_cols)
+#' all_same_cols <- c("Metadata_group")
+#' include_group_tag <- TRUE
+#' drop_lower <- FALSE
+#' simplyr::sim_all_same(sim_df, all_same_cols, annotation_cols, include_group_tag, drop_lower)
+#' @export
+sim_all_same <-
+  function(sim_df,
+           all_same_cols,
+           annotation_cols = NULL,
+           include_group_tag = FALSE,
+           drop_lower = FALSE) {
+    metadata <- attr(sim_df, "row_metadata")
+    
+    stopifnot(!is.null(metadata))
+    
+    metadata_i <-
+      metadata %>%
+      dplyr::select(id, dplyr::all_of(all_same_cols)) %>%
+      tidyr::unite("all_same_col", dplyr::all_of(all_same_cols), sep = ":")
+    
+    ids <-
+      dplyr::inner_join(metadata_i,
+                        metadata_i,
+                        by = "all_same_col",
+                        suffix = c("1", "2"))
+    
+    if (include_group_tag) {
+      ids %<>% dplyr::select(id1, id2, group = all_same_col)
+      
+    } else {
+      ids %<>% dplyr::select(id1, id2)
+    }
+    
+    if (drop_lower) {
+      sim_df %<>% dplyr::filter(id1 > id2)
+    }
+    
+    sim_df %<>%
+      dplyr::inner_join(ids, by = c("id1", "id2"))
+    
+    if (!is.null(annotation_cols)) {
+      sim_df %<>%
+        sim_annotate(annotation_cols,
+                     index = "left")
+    }
+    
+    sim_df
+    
+  }
+
+#' Filter rows of the melted similarity matrix to keep pairs with the same values in specific columns, and keep only some of these pairs.
+#'
+#' \code{sim_all_same} Filters melted similarity matrix to keep pairs with the same values in specific columns, keeping only some of these pairs.
+#'
+#' @param sim_df tbl with melted similarity matrix.
+#' @param all_same_cols character vector specifying columns.
+#' @param filter_keep_right tbl of metadata specifying which rows to keep on the right index.
+#' @param annotation_cols optional character vector specifying which columns from \code{metadata} to annotate the left index of the filtered \code{sim_df} with.
+#' @param drop_reference optional boolean specifying whether to filter (drop) pairs using \code{filter_keep_right} on the left index.
+#'
+#' @return filtered \code{sim_df} where only pairs with the same values in \code{all_same_cols} columns are kept, with further filtering using \code{filter_keep_right}.
+#'
+#' @importFrom magrittr %>%
+#' @importFrom magrittr %<>%
+#'
+#' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' n <- 20
+#' population <- tibble::tibble(
+#'   Metadata_group = sample(c("a", "b"), n, replace = TRUE),
+#'   Metadata_type = sample(c("x", "y"), n, replace = TRUE),
+#'   x = rnorm(n),
+#'   y = x + rnorm(n) / 100,
+#'   z = y + rnorm(n) / 1000
+#' )
+#' annotation_cols <- c("Metadata_group", "Metadata_type")
+#' sim_df <- simplyr::sim_calculate(population, method = "pearson")
+#' sim_df <- simplyr::sim_annotate(sim_df, annotation_cols)
+#' all_same_cols <- c("Metadata_group")
+#' filter_keep_right <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
+#' drop_reference <- FALSE
+#' simplyr::sim_all_same_keep_some(sim_df, all_same_cols, filter_keep_right, annotation_cols, drop_reference)
+#' @export
+sim_all_same_keep_some <-
+  function(sim_df,
+           all_same_cols,
+           filter_keep_right,
+           annotation_cols = NULL,
+           drop_reference = TRUE)
+  {
+    metadata <- attr(sim_df, "row_metadata")
+    
+    stopifnot(!is.null(metadata))
+    
+    sim_df %<>%
+      sim_all_same(all_same_cols) %>%
+      sim_filter(filter_keep = filter_keep_right,
+                 filter_side = "right")
+    
+    if (drop_reference) {
+      filter_drop_left <- filter_keep_right
+      
+      sim_df %<>%
+        sim_filter(filter_drop = filter_drop_left,
+                   filter_side = "left")
+    }
+    
+    if (!is.null(annotation_cols)) {
+      sim_df %<>%
+        dplyr::select(dplyr::all_of(sim_cols)) %>%
+        sim_annotate(annotation_cols,
+                     index = "left")
+      
+    }
+    
+    sim_df
+  }
+
+#' Filter rows of the melted similarity matrix to keep pairs with the same values in specific columns, and keep only some of these pairs.
+#'
+#' \code{sim_some_different_drop_some} Filters melted similarity matrix to keep pairs with the same values in specific columns, keeping only some of these pairs.
+#'
+#' @param sim_df tbl with melted similarity matrix.
+#' @param any_different_cols character vector specifying columns.
+#' @param all_same_cols optional character vector specifying columns.
+#' @param all_different_cols optional character vector specifying columns.
+#' @param filter_drop_left tbl of metadata specifying which rows to drop on the left index.
+#' @param filter_drop_right tbl of metadata specifying which rows to drop on the right index.
+#' @param annotation_cols optional character vector specifying which columns from \code{metadata} to annotate the left index of the filtered \code{sim_df} with.
+#'
+#' @return filtered \code{sim_df} keeping only pairs that have same values in all columns of \code{all_same_cols_non_rep}, different values in all columns \code{all_different_cols_non_rep}, and different values in at least one column of \code{any_different_cols_non_rep}, with further filtering using \code{filter_drop_left} and \code{filter_drop_right}.
+#'
+#' @importFrom magrittr %>%
+#' @importFrom magrittr %<>%
+#'
+#' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = sample(c("a", "b"), 4, replace = TRUE),
+#'   Metadata_type1 = sample(c("x", "y"), 4, replace = TRUE),
+#'   Metadata_type2 = sample(c("p", "q"), 4, replace = TRUE),
+#'   x = rnorm(4),
+#'   y = x + rnorm(4) / 100,
+#'   z = y + rnorm(4) / 1000
+#' )
+#' annotation_cols <- c("Metadata_group", "Metadata_type")
+#' sim_df <- simplyr::sim_calculate(population, method = "pearson")
+#' sim_df <- simplyr::sim_annotate(sim_df,  annotation_cols)
+#' all_same_cols <- c("Metadata_group")
+#' all_different_cols <- c("Metadata_type1")
+#' any_different_cols <- c("Metadata_type2")
+#' filter_drop_left <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
+#' filter_drop_right <- tibble::tibble(Metadata_group = "a", Metadata_type = "x")
+#' drop_reference <- FALSE
+#' simplyr::sim_some_different_drop_some(sim_df,  any_different_cols, all_same_cols, all_different_cols, filter_drop_left, filter_drop_right, annotation_cols)
+#' @export
+sim_some_different_drop_some <-
+  function(sim_df,
+           any_different_cols,
+           all_same_cols = NULL,
+           all_different_cols = NULL,
+           filter_drop_left = NULL,
+           filter_drop_right = NULL,
+           annotation_cols = NULL) {
+    metadata <- attr(sim_df, "row_metadata")
+    
+    stopifnot(!is.null(metadata))
+    
+    stopifnot(!any(all_same_cols %in% all_different_cols))
+    
+    metadata_i <- metadata
+    
+    if (is.null(all_same_cols)) {
+      # create a dummy column on which to join
+      metadata_i %<>% dplyr::mutate(all_same_col = 0)
+      all_same_cols <- "all_same_col"
+    } else {
+      # create a unified column on which to join
+      metadata_i %<>%
+        tidyr::unite(
+          "all_same_col",
+          dplyr::all_of(all_same_cols),
+          sep = ":",
+          remove = FALSE
+        )
+    }
+    
+    # ignore any_different_cols if superseded by all_different_cols
+    if (any(all_different_cols %in% any_different_cols)) {
+      any_different_cols <- NULL
+    }
+    
+    # remove from any_different_cols its intersection with all_same_cols
+    any_different_cols <- setdiff(any_different_cols, all_same_cols)
+    
+    # create a unified column for any_different_cols and include that new column
+    # in all_different_cols
+    if (!is.null(any_different_cols)) {
+      metadata_i %<>%
+        tidyr::unite(
+          "any_different_col",
+          dplyr::all_of(any_different_cols),
+          sep = ":",
+          remove = FALSE
+        )
+      
+      all_different_cols <-
+        c(all_different_cols, "any_different_col")
+      
+    }
+    
+    # create left and right metadata
+    f_metadata_filter <-
+      function(filter_drop) {
+        if (is.null(filter_drop)) {
+          metadata_i %>%
+            dplyr::select(id, all_same_col)
+          
+        } else {
+          metadata_i %>%
+            dplyr::anti_join(filter_drop, by = colnames(filter_drop)) %>%
+            dplyr::select(id, all_same_col)
+          
+        }
+      }
+    
+    metadata_left  <- f_metadata_filter(filter_drop_left)
+    metadata_right <- f_metadata_filter(filter_drop_right)
+    
+    # list of rows that should be the same (weak constraint)
+    ids_all_same <-
+      dplyr::inner_join(metadata_left,
+                        metadata_right,
+                        by = "all_same_col",
+                        suffix = c("1", "2"))
+    
+    # list of rows that should be the different (strong constraint)
+    ids_all_different <-
+      purrr::map_df(all_different_cols,
+                    function(all_different_col) {
+                      dplyr::inner_join(
+                        metadata_i %>% dplyr::select(id, dplyr::all_of(all_different_col)),
+                        metadata_i %>% dplyr::select(id, dplyr::all_of(all_different_col)),
+                        by = all_different_col,
+                        suffix = c("1", "2")
+                      ) %>%
+                        dplyr::select(id1, id2)
+                      
+                    }) %>%
+      dplyr::distinct()
+    
+    # impose strong constraint on weak constraint
+    ids <-
+      dplyr::anti_join(ids_all_same,
+                       ids_all_different,
+                       by = c("id1", "id2"))
+    
+    ids %<>% dplyr::select(id1, id2)
+    
+    # filter similarity matrix
+    sim_df %<>%
+      dplyr::inner_join(ids, by = c("id1", "id2"))
+    
+    # add annotations
+    if (!is.null(annotation_cols)) {
+      sim_df %<>%
+        sim_annotate(annotation_cols,
+                     index = "left")
+    }
+    
+    sim_df
+    
+  }
+
+#' Filter rows of the melted similarity matrix to create several sets of pairs.
+#'
+#' \code{sim_some_different_drop_some} Filters melted similarity matrix to create several sets of pairs.
+#'
+#' 0. Filter out some rows
+#'
+#' Filter out pairs that match \code{drop_group} in either right or left indices
+#'
+#' 1. Similarity to reference
+#'
+#' Fetch similarities between
+#' a. all rows (except, optionally those containing \code{reference})
+#' and
+#' b. all rows containing \code{reference}
+#' Do so only for those (a, b) pairs that
+#' - have *same* values in *all* columns of \code{all_same_cols_ref}
+#'
+#' 2. Similarity to replicates (no references)
+#'
+#' Fetch similarities between
+#' a. all rows except \code{reference} rows
+#' and
+#' b. all rows except \code{reference} rows (i.e. to each other)
+#'
+#' Do so for only those (a, b) pairs that
+#' - have *same* values in *all* columns of \code{all_same_cols_rep
+#'
+#' Keep, both, (a, b) and (b, a)
+#'
+#' 3. Similarity to replicates (only references)
+#'
+#' Fetch similarities between
+#' a. all rows containing \code{reference}
+#' and
+#' b. all rows containing \code{reference} (i.e. to each other)
+#'
+#' Do so for only those (a, b) pairs that
+#' - have *same* values in *all* columns of \code{all_same_cols_rep_ref}.
+#'
+#' Keep, both, (a, b) and (b, a)
+#'
+#' 4. Similarity to non-replicates
+#'
+#' Fetch similarities between
+#' a. all rows (except, optionally, \code{reference} rows)
+#' and
+#' b. all rows except \code{reference} rows
+#'
+#' Do so for only those (a, b) pairs that
+#' - have *same* values in *all* columns of \code{all_same_cols_non_rep}
+#' - have *different* values in *all* columns \code{all_different_cols_non_rep}
+#' - have *different* values in *at least one* column of \code{any_different_cols_non_rep}
+#'
+#' Keep, both, (a, b) and (b, a)
+#'
+#' 5. Similarity to group
+#'
+#' Fetch similarities between
+#' a. all rows (except, optionally, \code{reference} rows)
+#' and
+#' b. all rows (except, optionally, \code{reference} rows)
+#'
+#' Do so for only those (a, b) pairs that
+#' - have *same* values in *all* columns of \code{all_same_cols_group}
+#' - have *different* values in *at least one* column of \code{any_different_cols_group}
+#'
+#' Keep, both, (a, b) and (b, a)
+#'
+#'
+#'
+#' @param sim_df tbl with melted similarity matrix.
+#' @param all_same_cols character vector specifying columns.
+#' @param annotation_cols character vector specifying which columns from \code{metadata} to annotate the left index of the filtered \code{sim_df} with.
+#' @param any_different_cols optional character vector specifying columns.
+#' @param all_same_cols_rep_ref optional character vector specifying columns.
+#' @param any_different_cols_non_rep optional character vector specifying columns.
+#' @param all_different_cols_non_rep optional character vector specifying columns.
+#' @param any_different_cols_group optional character vector specifying columns.
+#' @param all_same_cols_group optional character vector specifying columns.
+#' @param reference optional character string specifying reference.
+#' @param drop_reference optional boolean specifying whether to filter (drop) pairs using \code{reference} on the left index.
+#' @param drop_group optional tbl; rows that match on \code{drop_group} on the left or right index are dropped.
+#'
+#' @return filtered \code{sim_df} with sets of pairs.
+#' @export
+#'
+#' @examples
+sim_collate <-
+  function(sim_df,
+           all_same_cols_rep,
+           annotation_cols,
+           all_same_cols_ref = NULL,
+           all_same_cols_rep_ref = NULL,
+           any_different_cols_non_rep = NULL,
+           all_same_cols_non_rep = NULL,
+           all_different_cols_non_rep = NULL,
+           any_different_cols_group = NULL,
+           all_same_cols_group = NULL,
+           reference = NULL,
+           drop_reference = FALSE,
+           drop_group = NULL) {
+    metadata <- attr(sim_df, "row_metadata")
+    
+    stopifnot(!is.null(metadata))
+    
+    # ---- 0. Filter out some rows ----
+    
+    if (!is.null(drop_group)) {
+      sim_df %<>%
+        sim_filter(filter_drop = drop_group, filter_side = "left") %>%
+        sim_filter(filter_drop = drop_group, filter_side = "right")
+      
+    }
+    
+    fetch_ref <-
+      !is.null(all_same_cols_ref) &&
+      !is.null(reference)
+    
+    fetch_rep_ref <-
+      !is.null(all_same_cols_ref) &&
+      !is.null(reference) &&
+      !is.null(all_same_cols_rep_ref)
+    
+    fetch_non_rep <-
+      !is.null(any_different_cols_non_rep) &&
+      !is.null(all_same_cols_non_rep) &&
+      !is.null(all_different_cols_non_rep)
+    
+    fetch_rep_group <-
+      !is.null(any_different_cols_group) &&
+      !is.null(all_same_cols_group)
+    
+    # ---- 1. Similarity to reference ----
+    
+    # Fetch similarities between
+    # a. all rows (except, optionally those containing `reference`)
+    # and
+    # b. all rows containing `reference`
+    # Do so only for those (a, b) pairs that
+    # - have *same* values in *all* columns of `all_same_cols_ref`
+    
+    if (fetch_ref) {
+      ref <-
+        sim_df %>%
+        sim_all_same_keep_some(
+          all_same_cols_ref,
+          filter_keep_right = reference,
+          drop_reference = drop_reference,
+          annotation_cols
+        )
+    }
+    
+    # ---- 2. Similarity to replicates (no references) ----
+    
+    # Fetch similarities between
+    # a. all rows except `reference` rows
+    # and
+    # b. all rows except `reference` rows (i.e. to each other)
+    #
+    # Do so for only those (a, b) pairs that
+    # - have *same* values in *all* columns of `all_same_cols_rep
+    #
+    # Keep, both, (a, b) and (b, a)
+    
+    rep <-
+      sim_df %>%
+      sim_filter(filter_drop = reference, filter_side = "left") %>%
+      sim_filter(filter_drop = reference, filter_side = "right") %>%
+      sim_all_same(all_same_cols_rep,
+                   annotation_cols,
+                   drop_lower = FALSE)
+    
+    # ---- 3. Similarity to replicates (only references) ----
+    
+    # Fetch similarities between
+    # a. all rows containing `reference`
+    # and
+    # b. all rows containing `reference` (i.e. to each other)
+    #
+    # Do so for only those (a, b) pairs that
+    # - have *same* values in *all* columns of `all_same_cols_rep_ref`.
+    #
+    # Keep, both, (a, b) and (b, a)
+    
+    if (fetch_rep_ref) {
+      rep_ref <-
+        sim_df %>%
+        sim_filter(filter_keep = reference,
+                   filter_side = "left") %>%
+        sim_filter(filter_keep = reference,
+                   filter_side = "right") %>%
+        sim_all_same(
+          all_same_cols = all_same_cols_rep_ref,
+          annotation_cols = annotation_cols,
+          drop_lower = FALSE
+        )
+    }
+    
+    # ---- 4. Similarity to non-replicates ----
+    
+    # Fetch similarities between
+    # a. all rows (except, optionally, `reference` rows)
+    # and
+    # b. all rows except `reference` rows
+    #
+    # Do so for only those (a, b) pairs that
+    # - have *same* values in *all* columns of `all_same_cols_non_rep`
+    # - have *different* values in *all* columns `all_different_cols_non_rep`
+    # - have *different* values in *at least one* column of `any_different_cols_non_rep`
+    #
+    # Keep, both, (a, b) and (b, a)
+    
+    if (fetch_non_rep) {
+      if (drop_reference) {
+        reference_left <- reference
+      } else {
+        reference_left <- NULL
+      }
+      
+      non_rep <-
+        sim_df %>%
+        sim_some_different_drop_some(
+          any_different_cols = any_different_cols_non_rep,
+          all_same_cols = all_same_cols_non_rep,
+          all_different_cols = all_different_cols_non_rep,
+          filter_drop_left = reference_left,
+          filter_drop_right = reference,
+          annotation_cols = annotation_cols
+        )
+    }
+    
+    # ---- 5. Similarity to group ----
+    
+    # Fetch similarities between
+    # a. all rows (except, optionally, `reference` rows)
+    # and
+    # b. all rows (except, optionally, `reference` rows)
+    #
+    # Do so for only those (a, b) pairs that
+    # - have *same* values in *all* columns of `all_same_cols_group`
+    # - have *different* values in *at least one* column of `any_different_cols_group`
+    #
+    # Keep, both, (a, b) and (b, a)
+    
+    if (fetch_rep_group) {
+      if (drop_reference) {
+        reference_both <- reference
+      } else {
+        reference_both <- NULL
+      }
+      
+      rep_group <-
+        sim_df %>%
+        sim_some_different_drop_some(
+          any_different_cols = any_different_cols_group,
+          all_same_cols = all_same_cols_group,
+          filter_drop_left = reference_both,
+          filter_drop_right = reference_both,
+          annotation_cols = annotation_cols
+        )
+    }
+    
+    # 6. Combine
+    
+    combined <-
+      rep %>% mutate(type = "rep")
+    
+    if (fetch_rep_ref) {
+      combined %<>%
+        dplyr::bind_rows(rep_ref %>% dplyr::mutate(type = "rep")) # same tag as ref
+    }
+    
+    if (fetch_non_rep) {
+      combined %<>%
+        dplyr::bind_rows(non_rep %>% dplyr::mutate(type = "non_rep"))
+    }
+    
+    if (fetch_ref) {
+      combined %<>%
+        dplyr::bind_rows(ref %>% dplyr::mutate(type = "ref"))
+    }
+    
+    if (fetch_rep_group) {
+      combined %<>%
+        dplyr::bind_rows(rep_group %>% dplyr::mutate(type = "rep_group"))
+    }
+    
+    # add attributes
+    
+    attr(combined, "all_different_cols_non_rep") <-
+      all_different_cols_non_rep
+    attr(combined, "all_same_cols_group") <- all_same_cols_group
+    attr(combined, "all_same_cols_non_rep") <- all_same_cols_non_rep
+    attr(combined, "all_same_cols_ref") <- all_same_cols_ref
+    attr(combined, "all_same_cols_rep") <- all_same_cols_rep
+    attr(combined, "all_same_cols_rep_ref") <- all_same_cols_rep_ref
+    attr(combined, "annotation_cols") <- annotation_cols
+    attr(combined, "any_different_cols_group") <-
+      any_different_cols_group
+    attr(combined, "any_different_cols_non_rep") <-
+      any_different_cols_non_rep
+    attr(combined, "drop_group") <- drop_group
+    attr(combined, "drop_reference") <- drop_reference
+    attr(combined, "reference") <- reference
+    
+    combined
+  }
+
+
+#' Compute metrics.
+#'
+#' \code{sim_metrics} computes metrics.
+#'
+#' @param munged_sim output of \code{sim_collated}.
+#' @param sim_type character string specifying the background distributions for computing scaled metrics. This must be one of the strings \code{"non_rep"} or \code{"ref"}.
+#' @param calculate_grouped optional boolean specifying whether to include grouped metrics.
+#' @param annotation_prefix optional character string specifying prefix for annotation columns (e.g. \code{"Metadata_"} (default)).
+#'
+#' @return list of metrics.
+#'
+#' @export
+#'
+#' @examples
+sim_metrics <- function(munged_sim,
+                        sim_type,
+                        calculate_grouped = FALSE,
+                        annotation_prefix = "Metadata_") {
+  if (!is.null(attr(munged_sim, "all_same_cols_rep", TRUE))) {
+    rep_cols <- attr(munged_sim, "all_same_cols_rep", TRUE)
+  } else {
+    message("Warning: Inferring columns specifying replicates from similarity dataframe...")
+    rep_cols <-
+      str_subset(colnames(munged_sim), pattern = annotation_prefix)
+  }
+  
+  helper_scale_aggregate <-
+    function(summary_cols,
+             sim_type_replication,
+             identifier = NULL) {
+      sim_stats <-
+        munged_sim %>%
+        dplyr::filter(type == sim_type) %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(summary_cols))) %>%
+        dplyr::summarise(dplyr::across(dplyr::all_of("sim"), list(mean = mean, sd = sd)),
+                         .groups = "keep") %>%
+        dplyr::ungroup()
+      
+      # scale using mean and s.d. of the `sim_type` distribution
+      
+      join_cols <-
+        intersect(colnames(munged_sim), colnames(sim_stats))
+      
+      sim_norm <-
+        munged_sim %>%
+        dplyr::filter(type == sim_type_replication) %>%
+        dplyr::inner_join(sim_stats, by = join_cols) %>%
+        dplyr::mutate(sim_scaled = (sim - sim_mean) / sim_sd)
+      
+      # get a summary per group
+      sim_norm_agg <-
+        sim_norm %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(summary_cols))) %>%
+        dplyr::summarise(dplyr::across(dplyr::all_of(c(
+          "sim_scaled", "sim"
+        )),
+        list(mean = mean, median = median)),
+        .groups = "keep") %>%
+        dplyr::rename_with( ~ paste(., sim_type, sep = "_"),
+                            dplyr::starts_with("sim_scaled")) %>%
+        dplyr::ungroup()
+      
+      sim_norm_agg %<>%
+        dplyr::inner_join(sim_stats %>%
+                            dplyr::rename_with(
+                              ~ paste(., "stat", sim_type, sep = "_"),
+                              dplyr::starts_with("sim")
+                            ),
+                          by = join_cols)
+      
+      if (!is.null(identifier)) {
+        sim_norm_agg %<>%
+          dplyr::rename_with(~ paste(., identifier, sep = "_"),
+                             dplyr::starts_with("sim"))
+      }
+      
+      sim_norm_agg
+    }
+  
+  # ---- Replicates ----
+  sim_norm_agg <-
+    helper_scale_aggregate(c("id1", rep_cols), "rep", "i")
+  
+  # get a summary per set
+  
+  sim_norm_agg_agg <-
+    sim_norm_agg %>%
+    dplyr::ungroup() %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(c(rep_cols)))) %>%
+    dplyr::summarise(dplyr::across(-dplyr::all_of("id1"),
+                                   list(mean = mean, median = median)),
+                     .groups = "keep")
+  
+  # append identified ("_i" for "individual")
+  
+  sim_norm_agg_agg %<>%
+    dplyr::rename_with( ~ paste(., "i", sep = "_"),
+                        dplyr::starts_with("sim"))
+  
+  result <-
+    list(per_row = sim_norm_agg,
+         per_set = sim_norm_agg_agg)
+  
+  # ---- Group replicates  ----
+  
+  if (calculate_grouped) {
+    sim_norm_group_agg <-
+      helper_scale_aggregate(rep_cols, "rep_group", "g")
+    
+    result <-
+      c(result,
+        list(per_set_group = sim_norm_group_agg))
+  }
+  
+  result
+}
+
+
+#' Plot similarity matrix.
+#'
+#' \code{sim_plot} Plots similarity matrix.
+#'
+#' @param sim_df tbl with melted similarity matrix.
+#' @param annotation_column character string specifying the column in \code{sim_df} to use to annotate rows and columns
+#' @param trim_label optional integer specifying the trim length for tick labels.
+#'
+#' @return \code{ggplot} object of the plot.
+#'
+#' @importFrom magrittr %>%
+#' @importFrom magrittr %>%
+#' @importFrom rlang !!
+#'
+#' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = sample(c("a", "b", "c", "d"), 100, replace = TRUE),
+#'   x1 = rnorm(100),
+#'   x2 = rnorm(100),
+#'   x3 = rnorm(100),
+#'   x4 = rnorm(100),
+#'   x5 = rnorm(100)
+#' )
+#' annotation_cols <- c("Metadata_group", "Metadata_type")
+#' sim_df <- simplyr::sim_calculate(population, method = "pearson")
+#' sim_df <- simplyr::sim_annotate(sim_df, annotation_cols)
+#' annotation_column <- "Metadata_group"
+#' simplyr::sim_plot(sim_df, annotation_column)
+#' @export
+sim_plot <-
+  function(sim_df,
+           annotation_column,
+           calculate_sim_rank = FALSE,
+           trim_label = NULL) {
+    col1 <- paste0(annotation_column, "1")
+    col2 <- paste0(annotation_column, "2")
+    col1_short <- paste0(annotation_column, "1")
+    col2_short <- paste0(annotation_column, "2")
+    col1_short_sym <- rlang::sym(col1_short)
+    col2_short_sym <- rlang::sym(col2_short)
+    
+    if (!is.null(trim_label)) {
+      sim_df[[col1_short]] <- str_sub(sim_df[[col1]] , 1, trim_label)
+      sim_df[[col2_short]] <-
+        stringr::str_sub(sim_df[[col2]] , 1, trim_label)
+      
+    } else {
+      col1_short <- col1
+      col2_short <- col2
+    }
+    
+    sim_df %<>%
+      dplyr::group_by(across(all_of(c(
+        col1_short, col2_short
+      )))) %>%
+      summarise(across(any_of(c("sim", "sim_rank")), mean), .groups = "keep")
+    
+    if (calculate_sim_rank) {
+      sim_df %<>%
+        dplyr::group_by(across(all_of(c(col1_short)))) %>%
+        dplyr::mutate(sim_rank = rank(-sim) / length(sim))
+      
+    } else {
+      stopifnot("sim_rank" %in% names(sim_df))
+    }
+    
+    p <- sim_df %>%
+      ggplot2::ggplot(ggplot2::aes(
+        !!col1_short_sym,
+        !!col2_short_sym,
+        fill = sim_rank,
+        label = sprintf("%d%%\n(%.2f)", as.integer(sim_rank * 100), sim)
+      )) +
+      ggplot2::geom_tile() +
+      ggplot2::geom_text(color = "white", size = 3) +
+      ggplot2::coord_equal() +
+      ggplot2::theme(axis.text.x = ggplot2::element_text(
+        angle = 90,
+        vjust = 0.5,
+        hjust = 1
+      )) +
+      ggplot2::scale_fill_continuous(limits = c(0, 1))
+    
+    p
+    
+  }
+
+#' Widen a symmetric similarity matrix.
+#'
+#' \code{sim_plot} Plots similarity matrix.
+#'
+#' @param sim_df tbl with melted similarity matrix.
+#' @param primary_key_column character string specifying the column in \code{sim_df} to use to uniquely identify rows and columns
+#' @param annotation_column character string specifying the column in \code{sim_df} to use to annotate rows and columns
+#'
+#' @return Widened similarity matrix.
+#'
+#' @importFrom magrittr %>%
+#' @importFrom magrittr %>%
+#' @importFrom rlang !!
+#'
+#' @examples
+#' suppressMessages(suppressWarnings(library(magrittr)))
+#' population <- tibble::tibble(
+#'   Metadata_group = sample(c("a", "b", "c", "d"), 100, replace = TRUE),
+#'   x1 <- rnorm(100),
+#'   x2 <- rnorm(100),
+#'   x3 <- rnorm(100),
+#'   x4 <- rnorm(100),
+#'   x5 <- rnorm(100)
+#' )
+#' population$Metadata_id <- seq(nrow(population))
+#' metadata <- simplyr::get_annotation(population)
+#' annotation_cols <- c("Metadata_group", "Metadata_type")
+#' sim_df <- simplyr::sim_calculate(population, method = "pearson")
+#' sim_df <- simplyr::sim_annotate(sim_df, annotation_cols)
+#' annotation_column <- "Metadata_group"
+#' primary_key_column <- "Metadata_id"
+#' res <- simplyr::sim_wider(sim_df, annotation_column, primary_key_column)
+#' res
+#' data.frame(id = rownames(res)) %>% inner_join(attr(res, "map"))
+#' @export
+sim_wider <-
+  function(sim_df,
+           annotation_column,
+           primary_key_column) {
+    primary_key_column1 <- paste0(primary_key_column, "1")
+    primary_key_column2 <- paste0(primary_key_column, "2")
+    primary_key_columns <-
+      c(primary_key_column1, primary_key_column2)
+    
+    annotation_column1 <- paste0(annotation_column, "1")
+    annotation_column2 <- paste0(annotation_column, "2")
+    annotation_columns <- c(annotation_column1, annotation_column2)
+    
+    annotation_column_unique1 <-
+      paste(annotation_column1, "uniq", sep = "_")
+    annotation_column_unique2 <-
+      paste(annotation_column2, "uniq", sep = "_")
+    
+    sim_df_wider <-
+      sim_df %>%
+      select(all_of(c(primary_key_columns, "sim"))) %>%
+      arrange(across(all_of(primary_key_columns))) %>%
+      pivot_wider(names_from = primary_key_column2, values_from = "sim") %>%
+      column_to_rownames(primary_key_column1)
+    
+    # assumes symmetric matrix
+    sim_df_wider %<>%
+      select(all_of(row.names(sim_df_wider)))
+    
+    stopifnot(colnames(sim_df_wider) == row.names(sim_df_wider))
+    
+    map1 <-
+      sim_df %>% select(all_of(c(
+        primary_key_column1, annotation_column1
+      ))) %>% distinct() %>% arrange(across(all_of(
+        c(primary_key_column1, annotation_column1)
+      )))
+    map2 <-
+      sim_df %>% select(all_of(c(
+        primary_key_column2, annotation_column2
+      ))) %>% distinct() %>% arrange(across(all_of(
+        c(primary_key_column2, annotation_column2)
+      )))
+    
+    stopifnot(all(map1 == map2))
+    
+    map1[[annotation_column_unique1]] <-
+      paste(map1[[annotation_column1]], seq_along(map1[[annotation_column1]]), sep = ":")
+    
+    map1[[primary_key_column1]] <-
+      as.character(map1[[primary_key_column1]])
+    
+    key1 <- data.frame(x = as.character(row.names(sim_df_wider)))
+    names(key1) <- primary_key_column1
+    
+    value1 <- key1 %>% inner_join(map1) %>% pull(annotation_column1)
+    
+    value_unique1 <-
+      key1 %>% inner_join(map1) %>% pull(annotation_column_unique1)
+    
+    row.names(sim_df_wider) <- value_unique1
+    colnames(sim_df_wider)  <- row.names(sim_df_wider)
+    
+    map1 %<>% select(id = annotation_column_unique1,
+                     annotation = annotation_column1,
+                     primary_key = primary_key_column1)
+    
+    attr(sim_df_wider, "map") <- map1
+    
+    sim_df_wider
+  }

@@ -1,0 +1,605 @@
+---
+title: "Deconstruct Grit"
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+    theme: lumen
+---
+
+# Setup
+
+```{r message=FALSE}
+library(magrittr)
+library(tidyverse)
+library(arrow)
+```
+
+
+```{r}
+source("../../R/cytominer-eval.R")
+```
+
+```{r}
+set.seed(42)
+```
+
+# Load data
+
+```{r message=FALSE}
+# read these features
+# https://github.com/broadinstitute/grit-benchmark/blob/31d9812e0c267d3535c85a72ef6bd0104d1a2130/1.calculate-metrics/cell-health/0.calculate-grit.ipynb
+# (See chunk 4)
+
+profiles <- read_csv("data/cell_health_merged_feature_select.csv.gz")
+```
+
+
+```{r}
+sim_df <- sim_calculate(profiles)
+```
+
+# Compute similarity sets
+
+```{r}
+
+# ---- 0. Filter out some rows ----
+
+drop_group <-
+  data.frame(Metadata_gene_name = "EMPTY")
+
+# ---- 1. Similarity to reference ----
+
+# Fetch similarities between
+# a. all rows (except, optionally those containing `reference`)
+# and
+# b. all rows containing `reference`
+# Do so only for those (a, b) pairs that
+# - have *same* values in *all* columns of `all_same_cols_ref`
+    
+reference <-
+  data.frame(Metadata_gene_name = c("Chr2", "Luc", "LacZ"))
+
+all_same_cols_ref <-
+  c("Metadata_cell_line")
+
+# all_same_cols_ref <-
+#   c("Metadata_cell_line",
+#     "Metadata_Plate")
+
+# ---- 2. Similarity to replicates (no references) ----
+
+# Fetch similarities between
+# a. all rows except `reference` rows
+# and
+# b. all rows except `reference` rows (i.e. to each other)
+#
+# Do so for only those (a, b) pairs that
+# - have *same* values in *all* columns of `all_same_cols_rep
+#
+# Keep, both, (a, b) and (b, a)
+
+all_same_cols_rep <-
+  c("Metadata_cell_line",
+    "Metadata_gene_name",
+    "Metadata_pert_name")
+
+# ---- 3. Similarity to replicates (only references) ----
+
+# Fetch similarities between
+# a. all rows containing `reference`
+# to
+# b. all rows containing `reference` (i.e. to each other)
+#
+# Do so for only those (a, b) pairs that
+# - have *same* values in *all* columns of `all_same_cols_rep_ref`.
+#
+# Keep, both, (a, b) and (b, a)
+
+# all_same_cols_rep_ref <-
+#   c(
+#     "Metadata_cell_line",
+#     "Metadata_gene_name",
+#     "Metadata_pert_name",
+#     "Metadata_Plate"
+#   )
+
+all_same_cols_rep_ref <-
+  c(
+    "Metadata_cell_line",
+    "Metadata_gene_name",
+    "Metadata_pert_name"
+  )
+# ---- 4. Similarity to non-replicates ----
+
+# Fetch similarities between
+# a. all rows (except, optionally, `reference` rows)
+# to
+# b. all rows except `reference` rows
+#
+# Do so for only those (a, b) pairs that
+# - have *same* values in *all* columns of `all_same_cols_non_rep`
+# - have *different* values in *all* columns `all_different_cols_non_rep`
+# - have *different* values in *at least one* column of `any_different_cols_non_rep`
+#
+# Keep, both, (a, b) and (b, a)
+
+any_different_cols_non_rep <-
+  c("Metadata_cell_line",
+    "Metadata_gene_name",
+    "Metadata_pert_name")
+
+all_same_cols_non_rep <-
+  c("Metadata_cell_line", 
+    "Metadata_Plate")
+
+all_different_cols_non_rep <-
+  c("Metadata_gene_name")
+
+# ---- 5. Similarity to group ----
+
+# Fetch similarities between
+# a. all rows (except, optionally, `reference` rows)
+# and
+# b. all rows (except, optionally, `reference` rows)
+#
+# Do so for only those (a, b) pairs that
+# - have *same* values in *all* columns of `all_same_cols_group`
+# - have *different* values in *at least one* column of `any_different_cols_group`
+#
+# Keep, both, (a, b) and (b, a)
+
+all_same_cols_group <-
+  c("Metadata_cell_line",
+    "Metadata_gene_name")
+
+any_different_cols_group <-
+  c("Metadata_cell_line",
+    "Metadata_gene_name",
+    "Metadata_pert_name")
+
+# ---- 6. Combine 1-5 and annotate the similarity matrix ----
+
+annotation_cols <-
+  c("Metadata_cell_line",
+    "Metadata_gene_name",
+    "Metadata_pert_name")
+
+collated_sim <-
+  sim_collate(
+    sim_df,
+    reference,
+    all_same_cols_rep = all_same_cols_rep,
+    all_same_cols_rep_ref = all_same_cols_rep_ref,
+    all_same_cols_ref = all_same_cols_ref,
+    any_different_cols_non_rep = any_different_cols_non_rep,
+    all_same_cols_non_rep = all_same_cols_non_rep,
+    all_different_cols_non_rep = all_different_cols_non_rep,
+    any_different_cols_group = any_different_cols_group,
+    all_same_cols_group = all_same_cols_group,
+    annotation_cols = annotation_cols,
+    drop_group = drop_group
+  )
+
+```
+
+# Check
+
+Check for duplicates 
+
+```{r}
+stopifnot(
+  collated_sim %>%
+    anti_join(reference, by = colnames(reference)) %>%
+    unite("id12", all_of(c("id1", "id2")), sep = ":") %>%
+    pull("id12") %>%
+    duplicated() %>%
+    any() %>%
+    not()
+)
+
+stopifnot(
+  collated_sim %>%
+    inner_join(reference, by = colnames(reference)) %>%
+    filter(type == "rep") %>%
+    unite("id12", all_of(c("id1", "id2")), sep = ":") %>%
+    pull("id12") %>%
+    duplicated() %>%
+    any() %>%
+    not()
+)
+
+stopifnot(
+  collated_sim %>%
+    inner_join(reference, by = colnames(reference)) %>%
+    filter(type == "rep_group") %>%
+    unite("id12", all_of(c("id1", "id2")), sep = ":") %>%
+    pull("id12") %>%
+    duplicated() %>%
+    any() %>%
+    not()
+)
+
+stopifnot(
+  collated_sim %>%
+    inner_join(reference, by = colnames(reference)) %>%
+    filter(type != "rep" && type != "rep_group") %>%
+    unite("id12", all_of(c("id1", "id2")), sep = ":") %>%
+    pull("id12") %>%
+    duplicated() %>%
+    any() %>%
+    not()
+)
+```
+
+Report counts
+
+```{r}
+all_sim_counts <-
+  collated_sim %>%
+  group_by(across(all_of(c("id1", all_same_cols_rep, "type")))) %>%
+  tally() %>%
+  arrange(across(all_of(all_same_cols_rep))) %>%
+  pivot_wider(names_from = "type",
+              names_prefix = "n_",
+              values_from = n,
+              values_fill = 0)
+```
+
+
+Replicate counts (`n_pert` perturbations have `n_rep` replicate similarities)
+
+```{r}
+all_sim_counts %>%
+  group_by(n_rep) %>%
+  tally(name = "n_pert") %>%
+  select(n_pert, n_rep)
+```
+
+Non-replicate counts (`n_pert` perturbations have `n_non_rep` non-replicate similarities)
+
+```{r}
+all_sim_counts %>%
+  group_by(n_non_rep) %>%
+  tally(name = "n_pert") %>%
+  select(n_pert, n_non_rep)
+```
+
+
+Reference counts (`n_pert` perturbations have `n_ref` reference similarities)
+
+```{r}
+all_sim_counts %>%
+  group_by(n_ref) %>%
+  tally(name = "n_pert") %>%
+  select(n_pert, n_ref)
+```
+
+Group counts (`n_pert` perturbations have `n_rep_group` reference similarities)
+
+```{r}
+all_sim_counts %>%
+  group_by(n_rep_group) %>%
+  tally(name = "n_pert") %>%
+  select(n_pert, n_rep_group)
+```
+
+# Inspect 
+
+```{r}
+norm_non_rep_metrics <- 
+  sim_metrics(collated_sim, "non_rep", calculate_grouped = TRUE)
+
+norm_ref_metrics <- 
+  sim_metrics(collated_sim, "ref", calculate_grouped = TRUE)
+```
+
+
+```{r}
+per_row_metrics <-
+  inner_join(
+    norm_non_rep_metrics[["per_row"]],
+    norm_ref_metrics[["per_row"]]
+  )
+
+per_set_metrics <-
+  inner_join(
+    norm_non_rep_metrics[["per_set"]],
+    norm_ref_metrics[["per_set"]]
+  )
+
+per_set_group_metrics <-
+  inner_join(
+    norm_non_rep_metrics[["per_set_group"]],
+    norm_ref_metrics[["per_set_group"]]
+  )
+```
+
+  
+```{r}
+plot_scatter <- function(df, x0, y0) {
+  df %>%
+    ggpubr::ggscatter(x = x0,
+                      y = y0) +
+    ggpubr::stat_cor(method = "spearman") + coord_equal()
+}
+```
+
+
+```{r}
+plot_scatter(
+  per_row_metrics, 
+  "sim_scaled_mean_non_rep_i", 
+  "sim_mean_i") + 
+  ggtitle("Replicate level, wrt non_reps")
+```
+
+
+```{r}
+plot_scatter(
+  per_set_metrics, 
+  "sim_scaled_mean_non_rep_i_mean_i", 
+  "sim_mean_i_mean_i") + 
+  ggtitle("Perturbation level, wrt non_reps (mean)")
+```
+
+
+```{r}
+plot_scatter(
+  per_set_metrics, 
+  "sim_scaled_mean_non_rep_i_median_i", 
+  "sim_mean_i_median_i") + 
+  ggtitle("Perturbation level, wrt non_reps (median)")
+```
+
+
+```{r}
+plot_scatter(
+  per_row_metrics, 
+  "sim_scaled_mean_ref_i", 
+  "sim_mean_i") + 
+  ggtitle("Replicate level, wrt reference")
+```
+
+
+```{r}
+plot_scatter(
+  per_set_metrics, 
+  "sim_scaled_mean_ref_i_mean_i", 
+  "sim_mean_i_mean_i") + 
+  ggtitle("Perturbation level, wrt reference (mean)")
+```
+
+
+```{r}
+plot_scatter(
+  per_set_metrics,
+  "sim_scaled_mean_ref_i_median_i",
+  "sim_mean_i_median_i") + 
+  ggtitle("Perturbation level, wrt reference (median)")
+```
+
+
+```{r}
+plot_scatter(
+  per_row_metrics, 
+  "sim_scaled_mean_ref_i", 
+  "sim_scaled_mean_non_rep_i") + 
+  ggtitle("Replicate level, wrt reference, wrt non_reps")
+```
+
+
+```{r}
+plot_scatter(
+  per_set_metrics, 
+  "sim_scaled_mean_ref_i_mean_i", 
+  "sim_scaled_mean_non_rep_i_mean_i") + 
+  ggtitle("Perturbation level, wrt reference, wrt non_reps (mean)")
+```
+
+
+```{r}
+plot_scatter(
+  per_set_group_metrics, 
+  "sim_scaled_mean_ref_g", 
+  "sim_mean_g") + 
+  ggtitle("Perturbation level, wrt ref (mean)")
+```
+
+
+
+# Compare implementations
+
+```{r message=FALSE}
+gritpy_df <- 
+  read_tsv("https://raw.githubusercontent.com/broadinstitute/grit-benchmark/31d9812e0c267d3535c85a72ef6bd0104d1a2130/1.calculate-metrics/cell-health/results/cell_health_grit.tsv") %>%
+  filter(barcode_control == "cutting_control" & cor_method == "pearson" & grit_replicate_summary_method == "mean") %>%
+  arrange(cell_line, perturbation, group) %>%
+  anti_join(
+    drop_group %>%
+      rename(group = Metadata_gene_name)
+  ) %>%
+  select(
+    cell_line, perturbation, group, grit
+  )
+```
+
+
+```{r}
+gritr_df <-
+  per_set_group_metrics %>%
+  select(
+    perturbation = Metadata_pert_name,
+    group = Metadata_gene_name,
+    grit = sim_scaled_mean_ref_g,
+    cell_line = Metadata_cell_line
+  ) %>%
+  arrange(cell_line, perturbation, group)
+
+grit_compare <-
+  inner_join(
+    gritpy_df,
+    gritr_df,
+    by = c("cell_line", "perturbation", "group"),
+    suffix = c("_py", "_r")
+  )
+
+plot_scatter(grit_compare %>% na.omit(), "grit_py", "grit_r")
+```
+
+# Check one case by hand
+
+```{r}
+target_guide <- data.frame(
+  Metadata_cell_line = "A549",
+  Metadata_gene_name = "AKT1",
+  Metadata_pert_name = "AKT1-1")
+
+sister_guide <- data.frame(
+  Metadata_cell_line = "A549",
+  Metadata_gene_name = "AKT1",
+  Metadata_pert_name = "AKT1-2")
+
+cutting_controls <- data.frame(
+  Metadata_cell_line = c("A549", "A549", "A549"),
+  Metadata_gene_name = c("Chr2", "Luc", "LacZ")
+)
+
+features <- function(df) t(as.matrix(df %>% select(-matches("^Metadata_"))))
+
+plate <- function(df) df$Metadata_Plate
+
+p_target_guide <- profiles %>% inner_join(target_guide)
+
+p_sister_guide <- profiles %>% inner_join(sister_guide)
+
+p_cutting_controls <- profiles %>% inner_join(cutting_controls)
+
+# get group similarities
+s_group <- as.vector(cor(features(p_target_guide), features(p_sister_guide)))
+
+# get control similarities (must be on same plate)
+f_same_plate_target_v_control <- 
+  outer(plate(p_target_guide), plate(p_cutting_controls), FUN = "==")
+
+# s_controls <-
+#   cor(features(p_target_guide), features(p_cutting_controls))[f_same_plate_target_v_control]
+
+s_controls <-
+  as.vector(cor(features(p_target_guide), features(p_cutting_controls)))
+
+# check control counts
+n_ref_count_test <- data.frame(n_ref = length(s_controls))
+
+n_ref_count_check <- 
+  all_sim_counts %>% 
+  ungroup() %>% 
+  inner_join(target_guide) %>% 
+  summarise(n_ref = sum(n_ref))
+
+stopifnot(n_ref_count_test == n_ref_count_check)
+
+# check group counts
+n_rep_group_count_test <- data.frame(n_rep_group = length(s_group))
+
+n_rep_group_count_check <- 
+  all_sim_counts %>% 
+  ungroup() %>% 
+  inner_join(target_guide) %>% 
+  summarise(n_rep_group = sum(n_rep_group))
+
+stopifnot(n_rep_group_count_test == n_rep_group_count_check)
+
+s_group_check <- 
+  collated_sim %>% 
+  inner_join(target_guide) %>% 
+  filter(type == "rep_group") %>% 
+  pull("sim")
+
+s_controls_check <- 
+  collated_sim %>% 
+  inner_join(target_guide) %>% 
+  filter(type == "ref") %>% 
+  pull("sim")
+
+stopifnot(all.equal.numeric(sort(s_group_check), sort(s_group)))
+
+stopifnot(all.equal.numeric(sort(s_controls_check), sort(s_controls)))
+```
+
+
+```{r}
+n_ref_count_check
+```
+
+
+```{r}
+n_rep_group_count_test
+```
+```{r}
+data.frame(mean = mean(s_controls), sd = sd(s_controls))
+```
+
+
+```{r}
+# compute grit
+target_grit <- 
+  target_guide %>%
+  mutate(grit = mean(scale(s_group, mean(s_controls), sd(s_controls)))) %>%
+  rename(
+    perturbation = Metadata_pert_name,
+    group = Metadata_gene_name,
+    cell_line = Metadata_cell_line
+  ) %>%
+  select(perturbation, group, cell_line, grit)
+
+target_grit
+```
+
+
+```{r}
+target_grit_check <- 
+gritr_df %>% inner_join(
+  target_guide,
+  by = c(
+    "perturbation" = "Metadata_pert_name",
+    "group" = "Metadata_gene_name",
+    "cell_line" = "Metadata_cell_line"
+  )
+) %>%
+  select(perturbation, group, cell_line, grit)
+
+
+target_grit_check
+
+```
+
+
+```{r}
+gritpy_df %>% inner_join(
+  target_guide,
+  by = c(
+    "perturbation" = "Metadata_pert_name",
+    "group" = "Metadata_gene_name",
+    "cell_line" = "Metadata_cell_line"
+  )
+)
+```
+
+```{r}
+# compute grit
+target_group_cor <- mean(s_group)
+
+data.frame(target_group_cor)
+```
+
+
+```{r}
+per_set_group_metrics %>%
+  inner_join(target_guide) %>%
+  pivot_longer(-all_of(colnames(target_guide)))
+```
+
+

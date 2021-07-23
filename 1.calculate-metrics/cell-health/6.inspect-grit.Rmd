@@ -1,0 +1,639 @@
+---
+title: "Inspect Grit"
+author: "Shantanu Singh"
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+    theme: lumen
+---
+
+```
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+    theme: lumen
+```
+
+```
+output: github_document
+```
+
+# Boilerplate 
+
+```{r echo=FALSE}
+show_table <- print
+```
+
+If running interactively in RStudio, 
+
+- change `output` in the header of this markdown to `html_notebook` and
+- change to `eval=TRUE` below
+
+When knitting for pushing to GitHub,
+
+- change `output` in the header of this markdown to `github_document` and
+- change to `eval=FALSE` below
+
+```{r eval=FALSE}
+show_table <- knitr::kable
+knitr::opts_chunk$set(fig.width = 6, fig.asp = 2/3)
+```
+
+
+```{r message=FALSE}
+library(magrittr)
+library(tidyverse)
+library(arrow)
+```
+
+
+```{r}
+source("../../R/cytominer-eval.R")
+```
+
+
+# Load data
+
+Load EMPTY-normalized data
+
+```{r message=FALSE}
+profiles <- read_csv("data/cell_health_merged_feature_select.csv.gz")
+```
+
+
+```{r}
+metadata <- get_annotation(profiles)
+```
+
+
+```{r}
+head(metadata, 5)
+```
+
+
+
+# Calculate similarity
+
+```{r}
+sim_df <- sim_calculate(profiles)
+```
+
+# Calculate 
+
+```{r}
+annotation_cols <-
+  c("Metadata_cell_line",
+    "Metadata_gene_name",
+    "Metadata_pert_name")
+```
+
+## Drop some wells
+
+```{r}
+drop_group <-
+  data.frame(Metadata_gene_name = "EMPTY")
+
+if (!is.null(drop_group)) {
+  sim_df %<>%
+    sim_filter(filter_drop = drop_group, filter_side = "left") %>%
+    sim_filter(filter_drop = drop_group, filter_side = "right")
+}
+```
+
+## Similarity to reference
+
+Fetch similarities between
+
+a. all rows (except, optionally those containing `reference`)
+
+and 
+
+b. all rows containing `reference`
+
+Do so only for those (a, b) pairs that 
+
+- have *same* values in *all* columns of `all_same_cols_ref`
+
+```{r}
+reference <-
+  data.frame(Metadata_gene_name = c("Chr2", "Luc", "LacZ"))
+
+drop_reference <- FALSE 
+
+all_same_cols_ref <-
+  c("Metadata_cell_line",
+    "Metadata_Plate")
+
+ref <-
+  sim_df %>%
+  sim_all_same_keep_some(
+    all_same_cols_ref,
+    filter_keep_right = reference,
+    drop_reference = drop_reference,
+    annotation_cols =
+      unique(c(annotation_cols, all_same_cols_ref))
+  )
+```
+
+## Similarity to group
+
+Fetch similarities between
+
+a. all rows 
+
+and 
+
+b. all rows
+
+Do so only for those (a, b) pairs that 
+
+- have *same* values in *all* columns of `all_same_cols_group`
+
+- have *different* values in *at least one* column of `any_different_cols_group`
+
+```{r}
+all_same_cols_group <-
+  c("Metadata_cell_line",
+    "Metadata_gene_name")
+
+any_different_cols_group <-
+  c("Metadata_cell_line",
+    "Metadata_gene_name",
+    "Metadata_pert_name")
+
+rep_group <-
+  sim_df %>%
+  sim_some_different_drop_some(
+    any_different_cols = any_different_cols_group,
+    all_same_cols = all_same_cols_group)
+```
+
+
+## Similarity to replicates (no references)
+
+Fetch similarities between
+
+a. all rows except `reference` rows
+
+and
+
+b. all rows except `reference` rows (i.e. to each other)
+
+Do so for only those (a, b) pairs that 
+
+- have *same* values in *all* columns of `all_same_cols_rep
+
+Keep, both, (a, b) and (b, a)
+    
+```{r}
+all_same_cols_rep <-
+  c("Metadata_cell_line",
+    "Metadata_gene_name",
+    "Metadata_pert_name")
+
+rep <-
+  sim_df %>%
+  sim_filter(filter_drop = reference, filter_side = "left") %>%
+  sim_filter(filter_drop = reference, filter_side = "right") %>%
+  sim_all_same(all_same_cols_rep,
+               annotation_cols,
+               drop_lower = FALSE)
+```
+
+
+## Similarity to replicates (only references)
+
+Fetch similarities between
+
+a. all rows containing `reference`
+
+and
+
+b. all rows containing `reference` (i.e. to each other)
+
+Do so for only those (a, b) pairs that 
+
+- have *same* values in *all* columns of `all_same_cols_rep_ref`. 
+
+Keep, both, (a, b) and (b, a)
+
+```{r}
+all_same_cols_rep_ref <-
+  c("Metadata_cell_line",
+    "Metadata_gene_name",
+    "Metadata_pert_name",
+    "Metadata_Plate")
+
+rep_ref <-
+  sim_df %>%
+  sim_filter(filter_keep = reference, filter_side = "left") %>%
+  sim_filter(filter_keep = reference, filter_side = "right") %>%
+  sim_all_same(
+    all_same_cols_rep_ref,
+    annotation_cols = all_same_cols_rep_ref,
+    drop_lower = FALSE
+  )
+```
+
+
+## Similarity to non-replicates
+
+Fetch similarities between
+
+a. all rows (except, optionally, `reference` rows)
+
+and
+
+b. all rows except `reference` rows
+
+Do so for only those (a, b) pairs that 
+
+- have *same* values in *all* columns of `all_same_cols_non_rep`
+
+- have *different* values in *all* columns `all_different_cols_non_rep`
+
+- have *different* values in *at least one* column of `any_different_cols_non_rep`
+
+Keep, both, (a, b) and (b, a)
+
+```{r}
+any_different_cols_non_rep <-
+  c("Metadata_cell_line",
+    "Metadata_gene_name",
+    "Metadata_pert_name")
+
+all_same_cols_non_rep <-
+  c("Metadata_cell_line", "Metadata_Plate")
+
+all_different_cols_non_rep <-
+  c("Metadata_gene_name")
+
+
+if (drop_reference) {
+  reference_left <- reference
+} else {
+  reference_left <- NULL
+}
+
+nonrep <-
+  sim_df %>%
+  sim_some_different_drop_some(
+    any_different_cols = any_different_cols_non_rep,
+    all_same_cols = all_same_cols_non_rep,
+    all_different_cols = all_different_cols_non_rep,
+    filter_drop_left = reference_left,
+    filter_drop_right = reference
+  )
+```
+
+
+# Check 
+
+## Similarity to reference
+
+```{r}
+# number of profiles
+n_profiles <- 
+  profiles %>%
+  group_by(across(all_of(c(all_same_cols_rep, all_same_cols_ref)))) %>%
+  tally(name = "n_profiles") %>%
+  arrange(desc(n_profiles))
+
+if(drop_reference) {
+  n_profiles %<>% anti_join(reference)
+}
+
+# number of references
+n_references <-
+  metadata %>%
+  inner_join(reference, by = colnames(reference)) %>%
+  group_by(across(all_of(all_same_cols_ref))) %>%
+  tally(name = "n_references")
+
+# number of pairs involving the reference (on the right column)
+n_reference_pairs <- 
+  ref %>%
+  group_by(across(all_of(c(all_same_cols_rep, all_same_cols_ref)))) %>%
+  tally(name = "n_reference_pairs") %>%
+  arrange(desc(n_reference_pairs))
+
+# number of profiles x number of references = number of pairs involving the
+# reference (on the right column)
+check_df <- 
+  n_references %>% 
+  inner_join(n_reference_pairs, by = all_same_cols_ref) %>%
+  inner_join(n_profiles, by = unique(c(all_same_cols_rep, all_same_cols_ref)))
+
+stopifnot(check_df %>%
+            mutate(check =
+                     n_reference_pairs == (n_profiles * n_references)) %>%
+            anti_join(reference) %>%
+            filter(!check) %>%
+            nrow() == 0)
+
+stopifnot(check_df %>%
+            mutate(check =
+                     n_reference_pairs == (n_profiles * n_references) - n_profiles) %>%
+            inner_join(reference) %>%
+            filter(!check) %>%
+            nrow() == 0)
+```
+
+## Similarity to replicates (no references)
+
+```{r}
+n_profiles <- 
+  profiles %>%
+  anti_join(reference, by = colnames(reference)) %>%
+  group_by(across(all_of(all_same_cols_rep))) %>%
+  tally(name = "n_profiles") %>%
+  arrange(desc(n_profiles))
+
+n_replicate_pairs <- 
+  rep %>%
+  group_by(across(all_of(annotation_cols))) %>%
+  tally(name = "n_replicate_pairs") %>%
+  arrange(desc(n_replicate_pairs))
+
+stopifnot(
+  inner_join(n_profiles, n_replicate_pairs, by = all_same_cols_rep) %>%
+    mutate(check =
+             n_replicate_pairs == n_profiles * (n_profiles - 1)) %>%
+    filter(!check) %>%
+    nrow() == 0
+)
+
+```
+
+## Similarity to nonreplicates
+
+```{r}
+nonrep_annotated <-
+  nonrep %>%
+  sim_annotate(
+    annotation_cols = c(annotation_cols, "Metadata_Plate", "Metadata_Well"),
+    index = "both"
+  )
+
+walk(all_same_cols_non_rep,
+     function(x) {
+       x1 <- paste0(x, "1")
+       x2 <- paste0(x, "2")
+       # by definition of all_same_cols
+       stopifnot(nonrep_annotated %>% filter(.data[[x1]] != .data[[x2]]) %>% nrow() == 0)
+     })
+
+
+walk(all_different_cols_non_rep,
+     function(x) {
+       x1 <- paste0(x, "1")
+       x2 <- paste0(x, "2")
+       # by definition of all_different_cols
+       stopifnot(nonrep_annotated %>% filter(.data[[x1]] == .data[[x2]]) %>% nrow() == 0)
+     })
+
+# by definition of any_different_cols
+# any_different is identical to not_all_same
+stopifnot(
+  nonrep_annotated %>%
+    unite(
+      "any_different_col1",
+      all_of(paste0(any_different_cols_non_rep, "1")),
+      sep = ":",
+      remove = FALSE
+    ) %>%
+    unite(
+      "any_different_col2",
+      all_of(paste0(any_different_cols_non_rep, "2")),
+      sep = ":",
+      remove = FALSE
+    ) %>%
+    filter(any_different_col1 == any_different_col2) %>%
+    nrow() == 0
+)
+```
+
+## Similarity to group
+
+```{r}
+repgroup_annotated <-
+  rep_group %>%
+  sim_annotate(
+    annotation_cols = annotation_cols,
+    index = "both"
+  )
+
+walk(all_same_cols_group,
+     function(x) {
+       x1 <- paste0(x, "1")
+       x2 <- paste0(x, "2")
+       # by definition of all_same_cols
+       stopifnot(repgroup_annotated %>% filter(.data[[x1]] != .data[[x2]]) %>% nrow() == 0)
+     })
+
+# by definition of any_different_cols
+# any_different is identical to not_all_same
+stopifnot(
+  repgroup_annotated %>%
+    unite(
+      "any_different_col1",
+      all_of(paste0(any_different_cols_group, "1")),
+      sep = ":",
+      remove = FALSE
+    ) %>%
+    unite(
+      "any_different_col2",
+      all_of(paste0(any_different_cols_group, "2")),
+      sep = ":",
+      remove = FALSE
+    ) %>%
+    filter(any_different_col1 == any_different_col2) %>%
+    nrow() == 0
+)
+```
+
+
+```{r}
+repgroup_annotated %>%
+  group_by(across(all_of(paste0(all_same_cols_group, "1")))) %>%
+  tally()
+```
+
+# Inspect
+
+## Similarity to replicates (no references)
+
+```{r}
+rep %>%
+  ggplot(aes(sim)) + 
+  geom_histogram(binwidth = .1) + 
+  facet_wrap(~Metadata_cell_line) +
+  ggtitle("Similarity among replicates")
+```
+## Similarity to group
+
+```{r}
+repgroup_annotated <-
+  rep_group %>%
+  sim_annotate(
+    annotation_cols = annotation_cols,
+    index = "left"
+  )
+
+repgroup_annotated %>%
+  anti_join(reference, by = colnames(reference)) %>%
+  ggplot(aes(sim)) + 
+  geom_histogram(binwidth = .1) + 
+  facet_wrap(~Metadata_cell_line) +
+  ggtitle("Similarity to group (exclude references)")
+```
+```{r}
+repgroup_annotated %>%
+  inner_join(reference, by = colnames(reference)) %>%
+  ggplot(aes(sim)) + 
+  geom_histogram(binwidth = .1) + 
+  facet_wrap(Metadata_gene_name~Metadata_cell_line, scales = "free_y") +
+  ggtitle("Similarity to group (only references)")
+
+
+repgroup_annotated %>%
+  inner_join(reference, by = colnames(reference)) %>%
+  ggplot(aes(Metadata_cell_line, sim, fill = Metadata_gene_name)) + 
+  geom_boxplot( position = "dodge") +
+  ggtitle("Similarity to group (only references)")
+
+repgroup_annotated %>%
+  inner_join(reference, by = colnames(reference)) %>%
+  group_by(Metadata_cell_line) %>%
+  summarise(across(all_of("sim"), list(mean = mean, sd = sd)))
+
+```
+
+## Similarity to replicates (only references)
+
+```{r}
+rep_ref %>%
+  ggplot(aes(sim)) + 
+  geom_histogram(binwidth = .1) + 
+  facet_wrap(Metadata_gene_name~Metadata_cell_line, scales = "free_y") +
+  ggtitle("Similarity among reference replicates")
+
+rep_ref %>% 
+  ggplot(aes(Metadata_cell_line, sim, fill = Metadata_gene_name)) + 
+  geom_boxplot( position = "dodge") +
+  ggtitle("Similarity among reference replicates")
+
+rep_ref %>% 
+  group_by(Metadata_cell_line) %>%
+  summarise(across(all_of("sim"), list(mean = mean, sd = sd)))
+```
+
+## Similarity to reference
+
+```{r}
+ref %>%
+  anti_join(reference) %>%
+  ggplot(aes(sim)) + 
+  geom_histogram(binwidth = .1) + 
+  facet_wrap(~Metadata_cell_line) +
+  ggtitle("Similarity to reference (exclude references)")
+```
+
+
+```{r}
+ref %>%
+  inner_join(reference) %>%
+  ggplot(aes(sim)) + 
+  geom_histogram(binwidth = .1) + 
+  facet_wrap(Metadata_gene_name~Metadata_cell_line, scales = "free_y") +
+  ggtitle("Similarity to reference (only references)")
+```
+
+```{r}
+ref %>% 
+  anti_join(reference, by = colnames(reference)) %>%
+  group_by(across(all_of(annotation_cols))) %>%
+  summarise(across(all_of("sim"), list(mean = mean, sd = sd)), .groups = "keep") %>%
+  ungroup() %>%
+  pivot_longer(-any_of(annotation_cols)) %>%
+  ggplot(aes(Metadata_cell_line, value)) + geom_boxplot() + 
+  facet_wrap(~name) +
+  ggtitle("Similarity to reference (exclude references)", 
+          subtitle = "Distributions of mean and s.d. for each perturbation")
+```
+```{r}
+ref %>% 
+  inner_join(reference, by = colnames(reference)) %>%
+  group_by(across(all_of(annotation_cols))) %>%
+  summarise(across(all_of("sim"), list(mean = mean, sd = sd)), .groups = "keep") %>%
+  ungroup() %>%
+  pivot_longer(-any_of(annotation_cols)) %>%
+  ggplot(aes(Metadata_cell_line, value, fill = Metadata_gene_name)) + geom_boxplot(position = "dodge") + 
+  facet_wrap(~name) +
+  ggtitle("Similarity to reference (only references)", 
+          subtitle = "Distributions of mean and s.d. for each perturbation")
+```
+
+## Similarity to non-replicates
+
+```{r}
+nonrep_annotated <-
+  nonrep %>%
+  sim_annotate(annotation_cols = c(annotation_cols),
+               index = "left")
+
+nonrep_annotated %>%
+  anti_join(reference, by = colnames(reference)) %>%
+  ggplot(aes(sim)) + 
+  geom_histogram(binwidth = .1) + 
+  facet_wrap(~Metadata_cell_line) +
+  ggtitle("Similarity among non-replicates (exclude references)")
+```
+
+
+```{r}
+nonrep_annotated %>%
+  inner_join(reference, by = colnames(reference)) %>%
+  ggplot(aes(sim)) + 
+  geom_histogram(binwidth = .1) + 
+  facet_wrap(Metadata_gene_name~Metadata_cell_line, scales = "free_y") +
+  ggtitle("Similarity among non-replicates (include references)")
+```
+
+```{r}
+nonrep_annotated %>% 
+  anti_join(reference, by = colnames(reference)) %>%
+  group_by(across(all_of(annotation_cols))) %>%
+  summarise(across(all_of("sim"), list(mean = mean, sd = sd)), .groups = "keep") %>%
+  pivot_longer(-any_of(annotation_cols)) %>%
+  ggplot(aes(Metadata_cell_line, value)) + geom_boxplot() + 
+  facet_wrap(~name) +
+  ggtitle("Similarity among non-replicates (exclude references)", 
+          subtitle = "Distributions of mean and s.d. for each perturbation")
+```
+
+
+```{r}
+nonrep_annotated %>% 
+  inner_join(reference, by = colnames(reference)) %>%
+  group_by(across(all_of(annotation_cols))) %>%
+  summarise(across(all_of("sim"), list(mean = mean, sd = sd)), .groups = "keep") %>%
+  ungroup() %>%
+  pivot_longer(-any_of(annotation_cols)) %>%
+  ggplot(aes(Metadata_cell_line, value, fill = Metadata_gene_name)) + 
+  geom_boxplot(position = "dodge") + 
+  facet_wrap(~name) +
+  ggtitle("Similarity among non-replicates (include references)", 
+          subtitle = "Distributions of mean and s.d. for each perturbation")
+
+```
+
+
+
+
