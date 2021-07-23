@@ -4,3 +4,4 @@
 .Rhistory
 *.parquet
 rsconnect
+*/__pycache__/*

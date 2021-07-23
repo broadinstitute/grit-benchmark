@@ -33,14 +33,28 @@ np.random.seed(2021)
 
 
 # Set grit constants
-sample_frac = 0.04
+# Sample different proportions of control cells
+sample_frac_cellline = {"A549": 0.02, "ES2": 0.04, "HCC44": 0.02}
+
 control_group_genes_cut = ["Chr2"]
 
 exclude_grit_genes = control_group_genes_cut + ["EMPTY"]
 
 replicate_group_grit = {
-    "replicate_id": "Metadata_cell_identity",
-    "group_id": "Metadata_pert_name",
+    "profile_col": "Metadata_cell_identity",
+    "replicate_group_col": "Metadata_pert_name",
+}
+
+plates = {
+    "SQ00014610": "A549",
+    "SQ00014611": "A549",
+    "SQ00014612": "A549",
+    "SQ00014613": "ES2",
+    "SQ00014614": "ES2",
+    "SQ00014615": "ES2",
+    "SQ00014616": "HCC44",
+    "SQ00014617": "HCC44",
+    "SQ00014618": "HCC44",
 }
 
 
@@ -50,12 +64,6 @@ replicate_group_grit = {
 # Only process ES2 plates
 sc_dir = pathlib.Path("../../0.download-data/data/cell_health/normalized/")
 
-plates = [
-    "SQ00014613",
-    "SQ00014614",
-    "SQ00014615",
-]
-
 plate_files = {
     plate: pathlib.Path(f"{sc_dir}/{plate}_normalized_featureselected.csv.gz")
     for plate in plates
@@ -63,7 +71,7 @@ plate_files = {
 plate_files
 
 
-# In[5]:
+# In[ ]:
 
 
 for plate in plate_files:
@@ -81,6 +89,9 @@ for plate in plate_files:
     print(sc_df.shape)
 
     morph_features = infer_cp_features(sc_df)
+
+    cell_line_id = plates[plate]
+    sample_frac = sample_frac_cellline[cell_line_id]
 
     neg_controls_df = (
         sc_df.query("Metadata_gene_name in @control_group_genes_cut")
@@ -188,3 +199,5 @@ for plate in plate_files:
     all_sc_grit_results.to_csv(
         output_results_file, sep="\t", compression="gzip", index=False
     )
+    print("Done.")
+    print("\n")

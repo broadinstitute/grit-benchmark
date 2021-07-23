@@ -6,6 +6,8 @@ dependencies:
 - conda-forge::python
 - conda-forge::pandas=1.2
 - conda-forge::numpy
+- conda-forge::dvc=2.0.2
+- conda-forge::dvc-s3=2.0.2
 - conda-forge::pathlib
 - conda-forge::requests
 - conda-forge::jupyter
@@ -24,4 +26,4 @@ dependencies:
 - bioconda::phate=1.0.4
 - pip:
   - git+https://github.com/cytomining/pycytominer@90fda6bc071825a526616130bd6ffe454cf17aaa
-  - git+https://github.com/cytomining/cytominer-eval@3b2a44aa0097db132357d2fe90953e9d258a34d1
+  - cytominer-eval==0.1

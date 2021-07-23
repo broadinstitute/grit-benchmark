@@ -2,9 +2,9 @@
 # coding: utf-8
 
 # ## Reprocess Cell Health profiles
-#
+# 
 # Use a whole-plate normalization scheme instead of normalization by controls only.
-#
+# 
 # We will use the control normalization in downstream analyses, but we are interested in comparing the impact of normalization strategy on grit calculations.
 
 # In[1]:
@@ -19,18 +19,14 @@ from pycytominer import normalize, feature_select
 # In[2]:
 
 
-def normalize_profile(
-    plate, output_dir, commit="cd91bd0daacef2b5ea25dcceb62482bb664d9de1"
-):
+def normalize_profile(plate, output_dir, commit="cd91bd0daacef2b5ea25dcceb62482bb664d9de1"):
     link = f"https://github.com/broadinstitute/cell-health/raw/{commit}/1.generate-profiles/data/profiles/{plate}/{plate}_augmented.csv.gz"
-
+    
     annotate_df = pd.read_csv(link)
-
+    
     norm_file = pathlib.Path(f"{output_dir}/{plate}_wholeplate_normalized.csv.gz")
-    feat_select_file = pathlib.Path(
-        f"{output_dir}/{plate}_wholeplate_normalized_feature_selected.csv.gz"
-    )
-
+    feat_select_file = pathlib.Path(f"{output_dir}/{plate}_wholeplate_normalized_feature_selected.csv.gz")
+    
     normalize(
         profiles=annotate_df,
         features="infer",
@@ -38,7 +34,7 @@ def normalize_profile(
         samples="all",
         method="mad_robustize",
         output_file=norm_file,
-        compression_options={"method": "gzip", "mtime": 1},
+        compression_options={"method": "gzip", "mtime": 1}
     )
 
 
@@ -55,7 +51,7 @@ plates = [
     "SQ00014615",
     "SQ00014616",
     "SQ00014617",
-    "SQ00014618",
+    "SQ00014618"
 ]
 
 # Define metadata features
@@ -96,14 +92,16 @@ plate_files = [x for x in output_dir.iterdir() if "_normalized.csv.gz" in x.name
 
 # Concatentate all plates
 x_df = (
-    pd.concat([pd.read_csv(x) for x in plate_files], sort=True)
+    pd.concat(
+        [pd.read_csv(x) for x in plate_files],
+        sort=True
+    )
     .rename(
         {
             "Image_Metadata_Plate": "Metadata_Plate",
-            "Image_Metadata_Well": "Metadata_Well",
+            "Image_Metadata_Well": "Metadata_Well"
         },
-        axis="columns",
-    )
+        axis="columns")
     .drop(["Metadata_broad_sample"], axis="columns")
 )
 
@@ -130,7 +128,11 @@ feature_select_ops = [
     "drop_outliers",
 ]
 
-x_df = feature_select(profiles=x_df, operation=feature_select_ops, na_cutoff=0)
+x_df = feature_select(
+    profiles=x_df,
+    operation=feature_select_ops,
+    na_cutoff=0
+)
 
 print(x_df.shape)
 x_df.head(2)
@@ -152,7 +154,6 @@ x_df.head(2)
 
 
 # Output
-profile_file = pathlib.Path(
-    f"{output_dir}/cell_health_profiles_merged_wholeplate_normalized_featureselected.tsv.gz"
-)
+profile_file = pathlib.Path(f"{output_dir}/cell_health_profiles_merged_wholeplate_normalized_featureselected.tsv.gz")
 x_df.to_csv(profile_file, index=False, sep="\t")
+

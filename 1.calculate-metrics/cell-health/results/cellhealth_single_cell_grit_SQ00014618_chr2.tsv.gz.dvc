@@ -1,0 +1,4 @@
+outs:
+- md5: 44bb0cbe5cce1d86f00b04b103a9b87c
+  size: 11040322
+  path: cellhealth_single_cell_grit_SQ00014618_chr2.tsv.gz
