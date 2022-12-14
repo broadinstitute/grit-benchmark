@@ -17,7 +17,7 @@ dependencies:
 - conda-forge::black
 - conda-forge::r-base
 - conda-forge::r-irkernel
-- conda-forge::r-dplyr=1.0.4
+- conda-forge::r-dplyr=1.0.10
 - conda-forge::r-tidyr
 - conda-forge::r-readr
 - conda-forge::r-ggplot2=3.3.3
@@ -25,5 +25,6 @@ dependencies:
 - conda-forge::r-patchwork
 - conda-forge::r-cowplot
 - conda-forge::r-gridextra
-- conda-forge::r-magick=2.6.0
-- conda-forge::imagemagick=7.0.10_0
+# imagemagick was only used to download premade figure panel
+# - conda-forge::r-magick=2.6.0
+# - conda-forge::imagemagick=7.1.0.43
