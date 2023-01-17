@@ -26,5 +26,5 @@ dependencies:
   - phate==1.0.4
   - dvc==2.36.0
   - dvc-s3==2.21.0
-  - git+https://github.com/cytomining/pycytominer@90fda6bc071825a526616130bd6ffe454cf17aaa
+  - git+https://github.com/cytomining/pycytominer@afac3ea16818ad25f37318ecd5c5090c0eff5806
   - cytominer-eval==0.1
