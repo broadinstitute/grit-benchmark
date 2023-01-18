@@ -2,9 +2,9 @@
 # coding: utf-8
 
 # ## Compare replicate summary metrics
-#
+# 
 # In the grit calculation, we summarize the control-based z-scored replicate correlations using a summary statistic.
-#
+# 
 # Here, I visualize the difference between using mean and median.
 
 # In[1]:
@@ -18,7 +18,11 @@ import plotnine as gg
 # In[2]:
 
 
-cell_line_colors = {"A549": "#861613", "ES2": "#1CADA8", "HCC44": "#2A364D"}
+cell_line_colors = {
+  "A549": "#861613",
+  "ES2": "#1CADA8",
+  "HCC44": "#2A364D"
+}
 
 grit_theme = gg.theme(
     strip_background=gg.element_rect(color="black", fill="#fdfff4"),
@@ -31,7 +35,7 @@ grit_theme = gg.theme(
     legend_key_size=10,
     legend_key_width=10,
     legend_key_height=10,
-    panel_grid=gg.element_line(size=0.35),
+    panel_grid=gg.element_line(size=0.35)
 )
 
 
@@ -54,10 +58,11 @@ cell_health_grit_df.head()
 
 
 summary_metric_df = (
-    cell_health_grit_df.pivot(
+    cell_health_grit_df
+    .pivot(
         index=["perturbation", "group", "cell_line", "cor_method", "barcode_control"],
         columns="grit_replicate_summary_method",
-        values="grit",
+        values="grit"
     )
     .reset_index()
     .rename({"mean": "mean_summary", "median": "median_summary"}, axis="columns")
@@ -92,7 +97,6 @@ metric_summary_gg
 def col_func(s):
     return f"Similarity metric: {s}"
 
-
 metric_summary_gg = (
     gg.ggplot(summary_metric_df, gg.aes(x="mean_summary", y="median_summary"))
     + gg.geom_point(gg.aes(fill="cell_line"), alpha=0.4, size=1, stroke=0.1)
@@ -106,9 +110,7 @@ metric_summary_gg = (
     + grit_theme
 )
 
-output_file = pathlib.Path(
-    f"{output_dir}/cell_health_grit_metric_summary_comparison.png"
-)
+output_file = pathlib.Path(f"{output_dir}/cell_health_grit_metric_summary_comparison.png")
 metric_summary_gg.save(output_file, dpi=500, height=3, width=6.5)
 
 metric_summary_gg
@@ -120,14 +122,15 @@ metric_summary_gg
 # What is the Spearman correlation between the four above facets
 
 (
-    summary_metric_df.groupby(["barcode_control", "cor_method"])
+    summary_metric_df
+    .groupby(["barcode_control", "cor_method"])
     .corr(method="spearman")
     .reset_index()
     .drop(["median_summary", "grit_replicate_summary_method"], axis="columns")
     .query("mean_summary != 1")
-    .rename(
-        {"mean_summary": "spearman_correlation_between_grit_summary_metrics"},
-        axis="columns",
-    )
+    .rename({
+        "mean_summary": "spearman_correlation_between_grit_summary_metrics"
+    }, axis="columns")
     .reset_index(drop=True)
 )
+

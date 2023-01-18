@@ -121,6 +121,9 @@ bulk_df = aggregate(
     operation="median"
 )
 
+# remove one row with NaN value
+bulk_df = bulk_df[~bulk_df['Metadata_guide_identity'].isnull()]
+
 # create a column for the gene
 bulk_df = (
     bulk_df

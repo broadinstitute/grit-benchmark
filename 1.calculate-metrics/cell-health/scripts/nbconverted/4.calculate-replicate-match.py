@@ -36,7 +36,7 @@ features = infer_cp_features(cell_health_df)
 meta_features = infer_cp_features(cell_health_df, metadata=True)
 
 similarity_metric = "pearson"
-operation = "percent_strong"
+operation = "replicate_reproducibility"
 
 replicate_groups = ["Metadata_cell_line", "Metadata_gene_name", "Metadata_pert_name"]
 
@@ -67,7 +67,8 @@ similarity_melted_df.head()
 
 
 non_replicate_cor_95th = (
-    similarity_melted_df.query("not group_replicate")
+    similarity_melted_df
+    .query("not group_replicate")
     .groupby("Metadata_cell_line_pair_a")["similarity_metric"]
     .quantile(0.95)
     .reset_index()
@@ -86,14 +87,16 @@ non_replicate_cor_95th
 
 # Capture median replicate correlation
 median_replicate_correlation_df = (
-    similarity_melted_df.query("group_replicate")
+    similarity_melted_df
+    .query("group_replicate")
     .groupby(
         [
             "Metadata_cell_line_pair_a",
             "Metadata_gene_name_pair_a",
-            "Metadata_pert_name_pair_a",
+            "Metadata_pert_name_pair_a"
         ]
-    )["similarity_metric"]
+    )
+    ["similarity_metric"]
     .median()
     .reset_index()
     .rename(
@@ -101,9 +104,8 @@ median_replicate_correlation_df = (
             "similarity_metric": "median_replicate_correlation",
             "Metadata_pert_name_pair_a": "perturbation",
             "Metadata_gene_name_pair_a": "group",
-            "Metadata_cell_line_pair_a": "cell_line",
-        },
-        axis="columns",
+            "Metadata_cell_line_pair_a": "cell_line"
+        }, axis="columns"
     )
 )
 
@@ -115,14 +117,16 @@ median_replicate_correlation_df.head()
 
 
 median_empty_correlation_df = (
-    similarity_melted_df.query("Metadata_gene_name_pair_b in @control_ids")
+    similarity_melted_df
+    .query("Metadata_gene_name_pair_b in @control_ids")
     .groupby(
         [
             "Metadata_cell_line_pair_a",
             "Metadata_gene_name_pair_a",
-            "Metadata_pert_name_pair_a",
+            "Metadata_pert_name_pair_a"
         ]
-    )["similarity_metric"]
+    )
+    ["similarity_metric"]
     .median()
     .reset_index()
     .rename(
@@ -130,9 +134,8 @@ median_empty_correlation_df = (
             "similarity_metric": "median_control_correlation",
             "Metadata_pert_name_pair_a": "perturbation",
             "Metadata_gene_name_pair_a": "group",
-            "Metadata_cell_line_pair_a": "cell_line",
-        },
-        axis="columns",
+            "Metadata_cell_line_pair_a": "cell_line"
+        }, axis="columns"
     )
 )
 
@@ -143,8 +146,17 @@ median_empty_correlation_df.head()
 # In[8]:
 
 
-full_correlation_results_df = median_replicate_correlation_df.merge(
-    median_empty_correlation_df, on=["cell_line", "group", "perturbation"], how="inner"
+full_correlation_results_df = (
+    median_replicate_correlation_df
+    .merge(
+        median_empty_correlation_df,
+        on=[
+            "cell_line",
+            "group",
+            "perturbation"
+        ],
+        how="inner"
+    )
 )
 
 print(full_correlation_results_df.shape)
@@ -158,3 +170,4 @@ full_correlation_results_df.head()
 output_file = pathlib.Path(f"{output_dir}/cell_health_replicate_reproducibility.tsv")
 
 full_correlation_results_df.to_csv(output_file, sep="\t", index=False)
+

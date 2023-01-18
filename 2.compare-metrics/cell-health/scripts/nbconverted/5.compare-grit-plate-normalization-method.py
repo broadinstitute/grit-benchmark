@@ -2,7 +2,7 @@
 # coding: utf-8
 
 # ## Compare grit as calculated with two different plate normalization schemes
-#
+# 
 # * Whole plate normalization
 # * Control-based normalization
 
@@ -18,7 +18,11 @@ import plotnine as gg
 # In[2]:
 
 
-cell_line_colors = {"A549": "#861613", "ES2": "#1CADA8", "HCC44": "#2A364D"}
+cell_line_colors = {
+  "A549": "#861613",
+  "ES2": "#1CADA8",
+  "HCC44": "#2A364D"
+}
 
 grit_theme = gg.theme(
     strip_background=gg.element_rect(color="black", fill="#fdfff4"),
@@ -31,7 +35,7 @@ grit_theme = gg.theme(
     legend_key_size=10,
     legend_key_width=10,
     legend_key_height=10,
-    panel_grid=gg.element_line(size=0.35),
+    panel_grid=gg.element_line(size=0.35)
 )
 
 
@@ -72,7 +76,7 @@ grit_plate_df.head()
 grit_full_df = grit_df.merge(
     grit_plate_df,
     on=["perturbation", "group", "cell_line", "barcode_control", "cor_method"],
-    suffixes=["_control", "_wholeplate"],
+    suffixes=["_control", "_wholeplate"]
 ).dropna()
 
 grit_full_df.head()
@@ -83,7 +87,6 @@ grit_full_df.head()
 
 def col_func(s):
     return f"Similarity metric: {s}"
-
 
 norm_control_gg = (
     gg.ggplot(grit_full_df, gg.aes(x="grit_control", y="grit_wholeplate"))
@@ -98,9 +101,7 @@ norm_control_gg = (
     + grit_theme
 )
 
-output_file = pathlib.Path(
-    f"{output_dir}/cell_health_grit_platenormalization_comparison.png"
-)
+output_file = pathlib.Path(f"{output_dir}/cell_health_grit_platenormalization_comparison.png")
 norm_control_gg.save(output_file, dpi=500, height=3, width=6.5)
 
 norm_control_gg
@@ -111,11 +112,15 @@ norm_control_gg
 
 # What is the Spearman correlation between the four above facets
 (
-    grit_full_df.groupby(["barcode_control", "cor_method"])
+    grit_full_df
+    .groupby(["barcode_control", "cor_method"])
     .corr(method="spearman")
     .reset_index()
     .drop(["level_2", "grit_wholeplate"], axis="columns")
     .query("grit_control != 1")
-    .rename({"grit_control": "spearman_correlation_between_grit"}, axis="columns")
+    .rename({
+        "grit_control": "spearman_correlation_between_grit"
+    }, axis="columns")
     .reset_index(drop=True)
 )
+

@@ -2,7 +2,7 @@
 # coding: utf-8
 
 # ## Calculate grit with different normalization schemes
-#
+# 
 # We compare whole well vs. control-based normalization in grit calculations.
 
 # In[1]:
@@ -30,9 +30,7 @@ output_dir = "results"
 
 # Load different normalized data
 data_dir = pathlib.Path("../../0.download-data/data/cell-health/profiles")
-plate_file = pathlib.Path(
-    f"{data_dir}/cell_health_profiles_merged_wholeplate_normalized_featureselected.tsv.gz"
-)
+plate_file = pathlib.Path(f"{data_dir}/cell_health_profiles_merged_wholeplate_normalized_featureselected.tsv.gz")
 
 profile_df = pd.read_csv(plate_file, sep="\t")
 
@@ -50,15 +48,18 @@ profile_df.head()
 barcode_col = "Metadata_pert_name"
 gene_col = "Metadata_gene_name"
 
-replicate_group_grit = {"replicate_id": barcode_col, "group_id": gene_col}
+replicate_group_grit = {
+    "profile_col": barcode_col,
+    "replicate_group_col": gene_col
+}
 
 control_group_cut = ["Chr2", "Luc", "LacZ"]
 control_group_pert = ["EMPTY"]
 
 control_barcodes_cut = (
     profile_df.loc[
-        profile_df[replicate_group_grit["group_id"]].isin(control_group_cut),
-        replicate_group_grit["replicate_id"],
+        profile_df[replicate_group_grit["replicate_group_col"]].isin(control_group_cut),
+        replicate_group_grit["profile_col"]
     ]
     .unique()
     .tolist()
@@ -66,8 +67,8 @@ control_barcodes_cut = (
 
 control_barcodes_pert = (
     profile_df.loc[
-        profile_df[replicate_group_grit["group_id"]].isin(control_group_pert),
-        replicate_group_grit["replicate_id"],
+        profile_df[replicate_group_grit["replicate_group_col"]].isin(control_group_pert),
+        replicate_group_grit["profile_col"]
     ]
     .unique()
     .tolist()
@@ -75,7 +76,7 @@ control_barcodes_pert = (
 
 control_barcodes = {
     "cutting_control": control_barcodes_cut,
-    "perturbation_control": control_barcodes_pert,
+    "perturbation_control": control_barcodes_pert
 }
 
 control_barcodes
@@ -84,11 +85,7 @@ control_barcodes
 # In[5]:
 
 
-get_ipython().run_cell_magic(
-    "time",
-    "",
-    'grit_results = []\nfor cell_line in profile_df.Metadata_cell_line.unique():\n    for control_barcode in control_barcodes:\n        for cor_method in ["pearson", "spearman"]:\n            result = evaluate(\n                profiles=profile_df.query("Metadata_cell_line == @cell_line"),\n                features=features,\n                meta_features=[barcode_col, gene_col],\n                replicate_groups=replicate_group_grit,\n                operation="grit",\n                similarity_metric=cor_method,\n                grit_control_perts=control_barcodes[control_barcode]\n            ).assign(\n                cell_line=cell_line,\n                barcode_control=control_barcode,\n                cor_method=cor_method\n            )\n\n            grit_results.append(result)\n    \ngrit_results = pd.concat(grit_results).reset_index(drop=True)\n\nprint(grit_results.shape)\ngrit_results.head()',
-)
+get_ipython().run_cell_magic('time', '', 'grit_results = []\nfor cell_line in profile_df.Metadata_cell_line.unique():\n    for control_barcode in control_barcodes:\n        for cor_method in ["pearson", "spearman"]:\n            result = evaluate(\n                profiles=profile_df.query("Metadata_cell_line == @cell_line"),\n                features=features,\n                meta_features=[barcode_col, gene_col],\n                replicate_groups=replicate_group_grit,\n                operation="grit",\n                similarity_metric=cor_method,\n                grit_control_perts=control_barcodes[control_barcode]\n            ).assign(\n                cell_line=cell_line,\n                barcode_control=control_barcode,\n                cor_method=cor_method\n            )\n\n            grit_results.append(result)\n    \ngrit_results = pd.concat(grit_results).reset_index(drop=True)\n\nprint(grit_results.shape)\ngrit_results.head()\n')
 
 
 # In[6]:
@@ -99,3 +96,4 @@ output_dir = "results"
 output_file = pathlib.Path(f"{output_dir}/cell_health_grit_wholeplatenormalized.tsv")
 
 grit_results.to_csv(output_file, sep="\t", index=False)
+
