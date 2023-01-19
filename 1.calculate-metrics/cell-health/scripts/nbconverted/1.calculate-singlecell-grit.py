@@ -2,7 +2,7 @@
 # coding: utf-8
 
 # ## Calculate Grit for Single Cell Profiles in Cell Health Data
-# 
+#
 # We only calculate grit for ES2 cells.
 
 # In[1]:
@@ -34,11 +34,7 @@ np.random.seed(2021)
 
 # Set grit constants
 # Sample different proportions of control cells
-sample_frac_cellline = {
-    "A549": 0.02,
-    "ES2": 0.04,
-    "HCC44": 0.02
-}
+sample_frac_cellline = {"A549": 0.02, "ES2": 0.04, "HCC44": 0.02}
 
 control_group_genes_cut = ["Chr2"]
 
@@ -46,7 +42,7 @@ exclude_grit_genes = control_group_genes_cut + ["EMPTY"]
 
 replicate_group_grit = {
     "profile_col": "Metadata_cell_identity",
-    "replicate_group_col": "Metadata_pert_name"
+    "replicate_group_col": "Metadata_pert_name",
 }
 
 plates = {
@@ -68,7 +64,10 @@ plates = {
 # Only process ES2 plates
 sc_dir = pathlib.Path("../../0.download-data/data/cell_health/normalized/")
 
-plate_files = {plate: pathlib.Path(f"{sc_dir}/{plate}_normalized_featureselected.csv.gz") for plate in plates}
+plate_files = {
+    plate: pathlib.Path(f"{sc_dir}/{plate}_normalized_featureselected.csv.gz")
+    for plate in plates
+}
 plate_files
 
 
@@ -83,25 +82,26 @@ for plate in plate_files:
         .rename({"index": "Metadata_cell_identity"}, axis="columns")
     )
 
-    sc_df.loc[:, "Metadata_cell_identity"] = [f"cell_{x}" for x in sc_df.Metadata_cell_identity]
+    sc_df.loc[:, "Metadata_cell_identity"] = [
+        f"cell_{x}" for x in sc_df.Metadata_cell_identity
+    ]
 
     print(sc_df.shape)
-    
+
     morph_features = infer_cp_features(sc_df)
-    
+
     cell_line_id = plates[plate]
     sample_frac = sample_frac_cellline[cell_line_id]
-    
+
     neg_controls_df = (
-        sc_df
-        .query("Metadata_gene_name in @control_group_genes_cut")
+        sc_df.query("Metadata_gene_name in @control_group_genes_cut")
         .sample(frac=sample_frac)
         .reset_index(drop=True)
     )
 
     control_group_guides_cut = neg_controls_df.Metadata_pert_name.unique()
     sc_neg_control_cells = neg_controls_df.Metadata_cell_identity.tolist()
-    
+
     # Prepare variables for results storage
     all_sc_grit_results = []
     all_sc_umap_embeddings = []
@@ -111,12 +111,12 @@ for plate in plate_files:
     for gene in genes:
         if gene in exclude_grit_genes:
             continue
-        
+
         print(f"Now analyzing {gene}...")
-            
+
         subset_sc_df = sc_df.query("Metadata_gene_name in @gene")
         subset_sc_df = pd.concat([subset_sc_df, neg_controls_df]).reset_index(drop=True)
-        
+
         guides = subset_sc_df.Metadata_pert_name.unique()
 
         # Apply UMAP
@@ -125,26 +125,30 @@ for plate in plate_files:
         # Combine results with single cell dataframe
         embedding_df = pd.concat(
             [
-                subset_sc_df.drop(morph_features, axis="columns").reset_index(drop=True),
-                pd.DataFrame(embedding, columns=["umap_0", "umap_1"])
+                subset_sc_df.drop(morph_features, axis="columns").reset_index(
+                    drop=True
+                ),
+                pd.DataFrame(embedding, columns=["umap_0", "umap_1"]),
             ],
-            axis="columns"
+            axis="columns",
         )
         all_sc_umap_embeddings.append(embedding_df.assign(grit_gene=gene))
-        
+
         # Apply PHATE
         phate_operator = phate.PHATE(n_jobs=-2)
         phate_operator.set_params(decay=20, t="auto", gamma=0, verbose=0)
 
         Y_phate = phate_operator.fit_transform(subset_sc_df.loc[:, morph_features])
-        
+
         # Combine results with single cell dataframe
         phate_embedding_df = pd.concat(
             [
-                subset_sc_df.drop(morph_features, axis="columns").reset_index(drop=True),
-                pd.DataFrame(Y_phate, columns=["phate_0", "phate_1"])
+                subset_sc_df.drop(morph_features, axis="columns").reset_index(
+                    drop=True
+                ),
+                pd.DataFrame(Y_phate, columns=["phate_0", "phate_1"]),
             ],
-            axis="columns"
+            axis="columns",
         )
         all_sc_phate_embeddings.append(phate_embedding_df.assign(grit_gene=gene))
 
@@ -152,14 +156,11 @@ for plate in plate_files:
         for guide in guides:
             if guide in control_group_guides_cut:
                 continue
-    
+
             subset_guide_df = pd.concat(
-                [
-                    subset_sc_df.query("Metadata_pert_name == @guide"),
-                    neg_controls_df
-                ]
+                [subset_sc_df.query("Metadata_pert_name == @guide"), neg_controls_df]
             ).reset_index(drop=True)
-            
+
             # Calculate Grit
             sc_grit_result = evaluate(
                 profiles=subset_guide_df,
@@ -167,25 +168,36 @@ for plate in plate_files:
                 meta_features=["Metadata_pert_name", "Metadata_cell_identity"],
                 replicate_groups=replicate_group_grit,
                 operation="grit",
-                grit_control_perts=sc_neg_control_cells
+                grit_control_perts=sc_neg_control_cells,
             ).assign(gene=gene, guide=guide)
-            
+
             all_sc_grit_results.append(
                 sc_grit_result.assign(grit_gene=gene, grit_guide=guide)
             )
-            
+
     # Output results
     all_sc_umap_embeddings = pd.concat(all_sc_umap_embeddings).reset_index(drop=True)
-    output_results_file = pathlib.Path(f"results/cellhealth_single_cell_umap_embeddings_{plate}_chr2.tsv.gz")
-    all_sc_umap_embeddings.to_csv(output_results_file, sep="\t", compression="gzip", index=False)
+    output_results_file = pathlib.Path(
+        f"results/cellhealth_single_cell_umap_embeddings_{plate}_chr2.tsv.gz"
+    )
+    all_sc_umap_embeddings.to_csv(
+        output_results_file, sep="\t", compression="gzip", index=False
+    )
 
     all_sc_phate_embeddings = pd.concat(all_sc_phate_embeddings).reset_index(drop=True)
-    output_results_file = pathlib.Path(f"results/cellhealth_single_cell_phate_embeddings_{plate}_chr2.tsv.gz")
-    all_sc_phate_embeddings.to_csv(output_results_file, sep="\t", compression="gzip", index=False)
+    output_results_file = pathlib.Path(
+        f"results/cellhealth_single_cell_phate_embeddings_{plate}_chr2.tsv.gz"
+    )
+    all_sc_phate_embeddings.to_csv(
+        output_results_file, sep="\t", compression="gzip", index=False
+    )
 
     all_sc_grit_results = pd.concat(all_sc_grit_results).reset_index(drop=True)
-    output_results_file = pathlib.Path(f"results/cellhealth_single_cell_grit_{plate}_chr2.tsv.gz")
-    all_sc_grit_results.to_csv(output_results_file, sep="\t", compression="gzip", index=False)
+    output_results_file = pathlib.Path(
+        f"results/cellhealth_single_cell_grit_{plate}_chr2.tsv.gz"
+    )
+    all_sc_grit_results.to_csv(
+        output_results_file, sep="\t", compression="gzip", index=False
+    )
     print("Done.")
     print("\n")
-

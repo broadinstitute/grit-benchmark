@@ -22,16 +22,21 @@ from pycytominer import get_na_columns
 # In[2]:
 
 
-consensus_folder = '../1.generate-profiles/data/consensus/'
-method='median'
+consensus_folder = "../1.generate-profiles/data/consensus/"
+method = "median"
 # method = 'weighted'
 
 
 # cell painting profliles
-x_median_df = (pd.read_csv(Path("{}{}_agg_cell_painting_modz.tsv.gz".format(consensus_folder, method)), sep='\t'))
+x_median_df = pd.read_csv(
+    Path("{}{}_agg_cell_painting_modz.tsv.gz".format(consensus_folder, method)),
+    sep="\t",
+)
 
 # the cell health labels
-y_median_df = pd.read_csv(Path("{}{}_agg_cell_health_modz.tsv.gz".format(consensus_folder, method)), sep='\t')
+y_median_df = pd.read_csv(
+    Path("{}{}_agg_cell_health_modz.tsv.gz".format(consensus_folder, method)), sep="\t"
+)
 
 
 # ### Perform the train-test split stratified by cell line
@@ -39,7 +44,12 @@ y_median_df = pd.read_csv(Path("{}{}_agg_cell_health_modz.tsv.gz".format(consens
 # In[3]:
 
 
-x_train_df, x_test_df, y_train_df, y_test_df = train_test_split(x_median_df, y_median_df, test_size = 0.15, stratify = x_median_df[['Metadata_cell_line']])
+x_train_df, x_test_df, y_train_df, y_test_df = train_test_split(
+    x_median_df,
+    y_median_df,
+    test_size=0.15,
+    stratify=x_median_df[["Metadata_cell_line"]],
+)
 
 
 # In[4]:
@@ -59,5 +69,8 @@ training_samples == training_samples
 # In[6]:
 
 
-get_ipython().run_cell_magic('time', '', '# save these splits\nsplits_folder = "data/train_test/{}_agg/".format(method)\nif not os.path.exists(splits_folder):\n    os.makedirs(splits_folder)\n\nfile = f"{splits_folder}x_train_modz.tsv.gz"\nx_train_df.to_csv(Path(file), sep="\\t", index=False)\n\nfile = f"{splits_folder}y_train_modz.tsv.gz"\ny_train_df.to_csv(Path(file), sep="\\t", index=False)\n\nfile = f"{splits_folder}x_test_modz.tsv.gz"\nx_test_df.to_csv(Path(file), sep="\\t", index=False)\n\nfile = f"{splits_folder}y_test_modz.tsv.gz"\ny_test_df.to_csv(Path(file), sep="\\t", index=False)')
-
+get_ipython().run_cell_magic(
+    "time",
+    "",
+    '# save these splits\nsplits_folder = "data/train_test/{}_agg/".format(method)\nif not os.path.exists(splits_folder):\n    os.makedirs(splits_folder)\n\nfile = f"{splits_folder}x_train_modz.tsv.gz"\nx_train_df.to_csv(Path(file), sep="\\t", index=False)\n\nfile = f"{splits_folder}y_train_modz.tsv.gz"\ny_train_df.to_csv(Path(file), sep="\\t", index=False)\n\nfile = f"{splits_folder}x_test_modz.tsv.gz"\nx_test_df.to_csv(Path(file), sep="\\t", index=False)\n\nfile = f"{splits_folder}y_test_modz.tsv.gz"\ny_test_df.to_csv(Path(file), sep="\\t", index=False)',
+)

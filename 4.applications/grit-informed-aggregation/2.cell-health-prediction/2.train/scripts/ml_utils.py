@@ -86,9 +86,11 @@ class CellHealthPredict:
         self.y_transform = y_transform
 
         # Realign the input matrices
-        self.x_realigned_df, self.y_scaled_df, self.n_samples_removed = self.realign_missing_data(
-            self.x_df, self.y
-        )
+        (
+            self.x_realigned_df,
+            self.y_scaled_df,
+            self.n_samples_removed,
+        ) = self.realign_missing_data(self.x_df, self.y)
 
         # Update the profile IDs
         self.profile_ids = self.x_realigned_df.index
