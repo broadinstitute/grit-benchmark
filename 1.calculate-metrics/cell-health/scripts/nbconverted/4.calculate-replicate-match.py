@@ -36,7 +36,7 @@ features = infer_cp_features(cell_health_df)
 meta_features = infer_cp_features(cell_health_df, metadata=True)
 
 similarity_metric = "pearson"
-operation = "percent_strong"
+operation = "replicate_reproducibility"
 
 replicate_groups = ["Metadata_cell_line", "Metadata_gene_name", "Metadata_pert_name"]
 

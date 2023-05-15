@@ -64,7 +64,7 @@ for plate in plates:
     # Set file names
     sql_file = f"sqlite:///data/cell_health/{plate}.sqlite"
     output_file = pathlib.Path(output_dir, f"{plate}_normalized.csv.gz")
-    
+
     # Set console output
     print(f"Now processing... {output_file}")
 
@@ -73,28 +73,26 @@ for plate in plates:
         file_or_conn=sql_file,
         strata=["Image_Metadata_Plate", "Image_Metadata_Well"],
     )
-    
+
     # Merge single cells
     sc_df = sc.merge_single_cells()
-    
+
     # Normalize data
-    sc_df = normalize(
-        profiles=sc_df,
-        method="standardize"
-    )
-    
+    sc_df = normalize(profiles=sc_df, method="standardize")
+
     # Merge well and plate metadata
     sc_df = (
         sc.image_df.merge(
             metadata_df,
             left_on="Image_Metadata_Well",
             right_on="Metadata_well_position",
-            how="left"
-        ).merge(
+            how="left",
+        )
+        .merge(
             sc_df,
             left_on=["TableNumber", "ImageNumber"],
             right_on=["Metadata_TableNumber", "Metadata_ImageNumber"],
-            how="right"
+            how="right",
         )
         .drop(
             [
@@ -102,20 +100,22 @@ for plate in plates:
                 "ImageNumber",
                 "Metadata_WellRow",
                 "Metadata_WellCol",
-                "Metadata_well_position"
-            ], axis="columns"
+                "Metadata_well_position",
+            ],
+            axis="columns",
         )
         .rename(
             {
                 "Image_Metadata_Plate": "Metadata_Plate",
-                "Image_Metadata_Well": "Metadata_Well"
-            }, axis="columns"
+                "Image_Metadata_Well": "Metadata_Well",
+            },
+            axis="columns",
         )
     )
 
     # Print data shape
     print(sc_df.shape)
-    
+
     # Output file to disk
     output(
         df=sc_df,
@@ -124,7 +124,6 @@ for plate in plates:
         float_format="%.5f",
         compression_options=compression_options,
     )
-    
+
     print("Done.")
     print("\n")
-

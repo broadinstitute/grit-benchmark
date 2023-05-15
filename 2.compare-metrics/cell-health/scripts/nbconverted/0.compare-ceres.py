@@ -82,6 +82,20 @@ depmap_sample_df = pd.read_csv(depmap_sample_file, index_col=0)
 # In[7]:
 
 
+hgnc = [x.split(" ")[0] for x in ceres_df.columns]
+ncbi_gene_id = [x.split(" ")[1].strip("()") for x in ceres_df.columns]
+ncbi_gene_id
+
+
+# In[8]:
+
+
+ceres_df.columns
+
+
+# In[9]:
+
+
 # Clean gene name column
 hgnc = [x.split(" ")[0] for x in ceres_df.columns]
 ncbi_gene_id = [x.split(" ")[1].strip("()") for x in ceres_df.columns]
@@ -99,7 +113,7 @@ ceres_df.columns = ncbi_gene_id
 ceres_genes_df.head(3)
 
 
-# In[8]:
+# In[10]:
 
 
 # Merge the data
@@ -111,14 +125,14 @@ print(ceres_df.shape)
 ceres_df.head(3)
 
 
-# In[9]:
+# In[11]:
 
 
 cell_lines = cell_health_grit_df.cell_line.unique().tolist()
 assert all([x in ceres_df.stripped_cell_line_name.tolist() for x in cell_lines])
 
 
-# In[10]:
+# In[12]:
 
 
 cols = ["stripped_cell_line_name"] + cell_health_grit_df._id.dropna().unique().tolist()
@@ -137,7 +151,7 @@ print(ceres_subset_df.shape)
 ceres_subset_df.head(3)
 
 
-# In[11]:
+# In[13]:
 
 
 cell_health_results_df = cell_health_grit_df.merge(
@@ -163,7 +177,7 @@ print(cell_health_results_df.shape)
 cell_health_results_df.head(3)
 
 
-# In[12]:
+# In[14]:
 
 
 cell_line_colors = {"A549": "#861613", "ES2": "#1CADA8", "HCC44": "#2A364D"}
@@ -186,7 +200,7 @@ grit_ceres_comparison_gg.save(output_file, dpi=500, height=3.5, width=6)
 grit_ceres_comparison_gg
 
 
-# In[13]:
+# In[15]:
 
 
 (
@@ -198,7 +212,7 @@ grit_ceres_comparison_gg
 )
 
 
-# In[14]:
+# In[16]:
 
 
 # What are the perturbations with high grit and low ceres scores?
@@ -211,7 +225,7 @@ grit_ceres_comparison_gg
 )
 
 
-# In[15]:
+# In[17]:
 
 
 control_compare_df = cell_health_results_df.pivot(
@@ -223,7 +237,7 @@ control_compare_df = cell_health_results_df.pivot(
 control_compare_df.head()
 
 
-# In[16]:
+# In[18]:
 
 
 grit_barcode_comparison_gg = (

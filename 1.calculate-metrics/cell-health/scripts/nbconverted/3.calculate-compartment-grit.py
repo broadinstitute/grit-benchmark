@@ -8,7 +8,7 @@
 # * Per channel (DNA, RNA, AGP, ER, Mito)
 #     * Use all features that include any information from one of these channels
 
-# In[1]:
+# In[17]:
 
 
 import pathlib
@@ -20,13 +20,13 @@ from pycytominer.cyto_utils import infer_cp_features
 from cytominer_eval import evaluate
 
 
-# In[2]:
+# In[18]:
 
 
 compartments = ["Cells", "Cytoplasm", "Nuclei"]
 
 
-# In[3]:
+# In[19]:
 
 
 # Load Cell Health data
@@ -38,21 +38,21 @@ print(df.shape)
 df.head(2)
 
 
-# In[4]:
+# In[20]:
 
 
 # Define cell health constants
 barcode_col = "Metadata_pert_name"
 gene_col = "Metadata_gene_name"
 
-replicate_group_grit = {"replicate_id": barcode_col, "group_id": gene_col}
+replicate_group_grit = {"profile_col": barcode_col, "replicate_group_col": gene_col}
 
 control_group_cut = ["Chr2", "Luc", "LacZ"]
 
 control_barcodes = (
     df.loc[
-        df[replicate_group_grit["group_id"]].isin(control_group_cut),
-        replicate_group_grit["replicate_id"],
+        df[replicate_group_grit["replicate_group_col"]].isin(control_group_cut),
+        replicate_group_grit["profile_col"],
     ]
     .unique()
     .tolist()
@@ -61,7 +61,7 @@ control_barcodes = (
 control_barcodes
 
 
-# In[5]:
+# In[21]:
 
 
 all_features = infer_cp_features(df, compartments=compartments)
@@ -70,7 +70,7 @@ meta_features = infer_cp_features(df, metadata=True)
 meta_features
 
 
-# In[6]:
+# In[22]:
 
 
 grit_compartment_results = []
@@ -120,7 +120,7 @@ grit_compartment_results.head()
 
 # ## Calculate grit for feature groups
 
-# In[7]:
+# In[23]:
 
 
 feature_group_compartments = list(
@@ -179,7 +179,7 @@ grit_subcompartment_results.head()
 
 # ## Calculate grit for channels
 
-# In[8]:
+# In[24]:
 
 
 channels = ["DNA", "RNA", "Mito", "AGP", "ER"]
@@ -231,7 +231,7 @@ grit_channel_results.head()
 
 # ## Concatenate results together
 
-# In[9]:
+# In[25]:
 
 
 full_grit_results = pd.concat(
@@ -247,7 +247,7 @@ print(full_grit_results.shape)
 full_grit_results.head()
 
 
-# In[10]:
+# In[26]:
 
 
 # Output results

@@ -31,6 +31,9 @@ np.random.seed(2021)
 
 gse_id = "GSE132080"
 perturbseq_data_dir = pathlib.Path("../../0.download-data/data/perturbseq/")
+perturbseq_screen_phenotypes = (
+    "paper_supplement/Table_S16_perturb-seq_screen_phenotypes.txt"
+)
 
 
 # In[4]:
@@ -56,7 +59,7 @@ print(len(gene_features))
 
 
 # Load activities results (bulk)
-file = pathlib.Path("supplementary/Table_S16_perturb-seq_screen_phenotypes.txt")
+file = perturbseq_data_dir / perturbseq_screen_phenotypes
 activity_df = pd.read_csv(file, sep="\t").rename({"Unnamed: 0": "id"}, axis="columns")
 
 # Create a perturbation column to match with other IDs
@@ -105,7 +108,7 @@ bulk_subset_df.head()
 barcode_col = "Metadata_guide_identity"
 gene_col = "Metadata_gene_identity"
 
-replicate_group_grit = {"replicate_id": barcode_col, "group_id": gene_col}
+replicate_group_grit = {"profile_col": barcode_col, "replicate_group_col": gene_col}
 
 neg_controls = [x for x in bulk_subset_df.Metadata_guide_identity if "neg_ctrl" in x]
 neg_controls
@@ -158,8 +161,8 @@ sc_neg_controls = sc_neg_controls_df.query(
 ).Metadata_cell_identity.tolist()
 
 replicate_group_grit = {
-    "replicate_id": "Metadata_cell_identity",
-    "group_id": "Metadata_guide_identity",
+    "profile_col": "Metadata_cell_identity",
+    "replicate_group_col": "Metadata_guide_identity",
 }
 
 
@@ -209,7 +212,7 @@ for gene in genes:
 
             # Calculate Grit
             # Note, every negative control single cell will recieve MULTIPLE grit scores
-            # depending on the replicate group information (group_id)!
+            # depending on the replicate group information (replicate_group_col)!
             sc_grit_result = evaluate(
                 profiles=subset_guide_df,
                 features=genes_to_retain,
