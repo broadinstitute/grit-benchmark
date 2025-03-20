@@ -1,3 +1,6 @@
+> NOTE: This repository is deprecated and we suggest using mean average precision (mAP) as a primary metric for assessing profile strength and similarity. The mAP framework is implemented in the [copairs](https://github.com/cytomining/copairs) Python package. For more details please see our pre-print:
+>> Alexandr A. Kalinin, John Arevalo, Loan Vulliard, Erik Serrano, Hillary Tsang, Michael Bornholdt, Alán F. Muñoz, Suganya Sivagurunathan, Bartek Rajwa, Anne E. Carpenter, Gregory P. Way, Shantanu Singh. bioRxiv 2024.04.01.587631; doi: https://doi.org/10.1101/2024.04.01.587631
+
 # Benchmarking Grit
 
 Grit is defined by [Merrian Webster](https://www.merriam-webster.com/dictionary/grit) as "firmness of mind or spirit; unyielding courage in the face of hardship or danger".
