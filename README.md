@@ -1,5 +1,6 @@
-> NOTE: This repository is deprecated and we suggest using mean average precision (mAP) as a primary metric for assessing profile strength and similarity. The mAP framework is implemented in the [copairs](https://github.com/cytomining/copairs) Python package. For more details please see our pre-print:
->> Alexandr A. Kalinin, John Arevalo, Loan Vulliard, Erik Serrano, Hillary Tsang, Michael Bornholdt, Alán F. Muñoz, Suganya Sivagurunathan, Bartek Rajwa, Anne E. Carpenter, Gregory P. Way, Shantanu Singh. bioRxiv 2024.04.01.587631; doi: https://doi.org/10.1101/2024.04.01.587631
+> ## DEPRECATION NOTE
+>This repository is deprecated and we suggest using mean average precision (mAP) as a primary metric for assessing profile strength and similarity. The mAP framework is implemented in the [copairs](https://github.com/cytomining/copairs) Python package. For more details please see our publication:
+>> Kalinin, A.A., Arevalo, J., Serrano, E., Vulliard, L., Tsang, H., Bornholdt, M., Muñoz, A.F., Sivagurunathan, S., Rajwa, B., Carpenter, A.E., Way, G.P. and Singh, S., 2025. A versatile information retrieval framework for evaluating profile strength and similarity. _Nature Communications_ 16, 5181. doi:[10.1038/s41467-025-60306-2](https://doi.org/10.1038/s41467-025-60306-2)
 
 # Benchmarking Grit
 
